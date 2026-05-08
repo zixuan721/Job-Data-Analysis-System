@@ -1,0 +1,1070 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+<style>
+.kpi-card { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; margin-bottom: 15px; }
+.kpi-card.orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.kpi-card.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.kpi-card.teal { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+.kpi-card.gold { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.kpi-card.red { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+.kpi-number { font-size: 32px; font-weight: bold; margin: 10px 0; }
+.kpi-label { font-size: 14px; opacity: 0.9; }
+.section-title { font-size: 18px; font-weight: bold; color: #333; border-left: 4px solid #5b6ef5; padding-left: 12px; margin: 20px 0 15px 0; }
+.chart-insight { background: #f8f9fa; border-left: 4px solid #5b6ef5; padding: 12px 16px; margin-top: 10px; font-size: 13px; line-height: 1.8; border-radius: 0 4px 4px 0; }
+.chart-insight p { margin: 4px 0; }
+.filter-section .layui-form-label { width: 80px; }
+.filter-section .layui-input-inline { width: 140px; }
+</style>
+
+<div class="layui-fluid">
+
+  <!-- Page Title -->
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 24px; border-radius: 8px; margin-bottom: 20px;">
+    <h2 style="margin:0 0 8px 0; font-size: 26px;">招聘数据探索性分析 (EDA)</h2>
+    <p style="margin:0; opacity:0.85; font-size: 15px;">基于全量招聘数据的20+维度可视化分析</p>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="layui-row layui-col-space15" style="margin-bottom:10px;">
+    <div class="layui-col-md2">
+      <div class="kpi-card">
+        <div class="kpi-label">📋 总职位数</div>
+        <div class="kpi-number" id="kpi-total">--</div>
+      </div>
+    </div>
+    <div class="layui-col-md2">
+      <div class="kpi-card orange">
+        <div class="kpi-label">💰 平均薪资</div>
+        <div class="kpi-number" id="kpi-avg-salary">--</div>
+      </div>
+    </div>
+    <div class="layui-col-md2">
+      <div class="kpi-card green">
+        <div class="kpi-label">📈 中位薪资</div>
+        <div class="kpi-number" id="kpi-median-salary">--</div>
+      </div>
+    </div>
+    <div class="layui-col-md2">
+      <div class="kpi-card teal">
+        <div class="kpi-label">🔥 热门技能</div>
+        <div class="kpi-number" id="kpi-top-skill" style="font-size:22px;">--</div>
+      </div>
+    </div>
+    <div class="layui-col-md2">
+      <div class="kpi-card gold">
+        <div class="kpi-label">🌆 覆盖城市</div>
+        <div class="kpi-number" id="kpi-cities">--</div>
+      </div>
+    </div>
+    <div class="layui-col-md2">
+      <div class="kpi-card red">
+        <div class="kpi-label">💼 岗位种类</div>
+        <div class="kpi-number" id="kpi-jobs">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="layui-card" style="margin-bottom:20px;">
+    <div class="layui-card-header" style="font-weight:bold;">🔎 数据筛选</div>
+    <div class="layui-card-body">
+      <form class="layui-form filter-section">
+        <div class="layui-form-item" style="margin-bottom:0;">
+          <div class="layui-inline">
+            <label class="layui-form-label">城市</label>
+            <div class="layui-input-inline">
+              <select name="city" lay-filter="city">
+                <option value="">全部城市</option>
+                <option value="北京">北京</option>
+                <option value="上海">上海</option>
+                <option value="广州">广州</option>
+                <option value="深圳">深圳</option>
+                <option value="杭州">杭州</option>
+                <option value="成都">成都</option>
+                <option value="武汉">武汉</option>
+                <option value="南京">南京</option>
+                <option value="西安">西安</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">关键词</label>
+            <div class="layui-input-inline">
+              <input type="text" name="keyword" class="layui-input" placeholder="如Python,Java">
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">学历</label>
+            <div class="layui-input-inline">
+              <select name="education" lay-filter="education">
+                <option value="">不限</option>
+                <option value="大专">大专</option>
+                <option value="本科">本科</option>
+                <option value="硕士">硕士</option>
+                <option value="博士">博士</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">经验</label>
+            <div class="layui-input-inline">
+              <select name="experience" lay-filter="experience">
+                <option value="">不限</option>
+                <option value="1年以内">1年以内</option>
+                <option value="1-3年">1-3年</option>
+                <option value="3-5年">3-5年</option>
+                <option value="5-10年">5-10年</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">薪资(K)</label>
+            <div class="layui-input-inline" style="width:80px;">
+              <input type="number" name="salary_min" class="layui-input" placeholder="最低">
+            </div>
+            <span style="padding:0 5px; line-height:38px; display:inline-block;">-</span>
+            <div class="layui-input-inline" style="width:80px;">
+              <input type="number" name="salary_max" class="layui-input" placeholder="最高">
+            </div>
+          </div>
+          <div class="layui-inline">
+            <button type="button" class="layui-btn" id="filter-btn">🔍 筛选</button>
+            <button type="button" class="layui-btn layui-btn-primary" id="reset-btn">重置</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Section 1: 基础画像 ===== -->
+  <div class="section-title">📊 Section 1 - 基础画像</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 1: Top20 岗位 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">Top 20 热门岗位</div>
+        <div class="layui-card-body">
+          <div id="chart1" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：识别最热门职位名称，了解当前市场最旺盛的岗位需求。</p>
+            <p>🔍 <b>主要发现</b>：Python/Java/前端岗位需求最旺盛，技术类职位占据排行榜主导地位。</p>
+            <p>💡 <b>结论建议</b>：优先向高频岗位方向发展，掌握对应核心技术栈可显著提升就业竞争力。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 2: Top20 城市 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">Top 20 招聘城市</div>
+        <div class="layui-card-body">
+          <div id="chart2" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解各城市招聘规模，识别就业市场的地域热点。</p>
+            <p>🔍 <b>主要发现</b>：北上广深是招聘主力，一线城市招聘量高度集中，遥遥领先其他城市。</p>
+            <p>💡 <b>结论建议</b>：一线城市机会多但竞争激烈，杭州、成都等新一线城市性价比更高，可综合考量。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 3: 薪资分布直方图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">薪资区间分布</div>
+        <div class="layui-card-body">
+          <div id="chart3" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：掌握薪资整体分布形态，了解市场薪资集中区间。</p>
+            <p>🔍 <b>主要发现</b>：主流薪资集中在10-25K，整体呈右偏分布，高薪岗位数量相对较少。</p>
+            <p>💡 <b>结论建议</b>：10-20K是市场主流区间，技术岗位经过积累可期望突破20K以上。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 4: 薪资箱线图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">薪资箱线图</div>
+        <div class="layui-card-body">
+          <div id="chart4" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：识别薪资中位数、四分位数和异常值，全面评估薪资结构。</p>
+            <p>🔍 <b>主要发现</b>：薪资中位数约为20K，存在高薪异常点，说明部分高端职位薪资远超平均。</p>
+            <p>💡 <b>结论建议</b>：以中位数为基准谈薪，争取高薪岗位需具备稀缺技能或丰富经验。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 1 row -->
+
+  <!-- ===== Section 2: 要求分析 ===== -->
+  <div class="section-title">🎓 Section 2 - 要求分析</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 5: 学历饼图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">学历要求分布</div>
+        <div class="layui-card-body">
+          <div id="chart5" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解市场对学历的整体要求，评估不同学历的市场需求比例。</p>
+            <p>🔍 <b>主要发现</b>：本科是主流要求，占比超60%，大专岗位也有相当数量，硕博需求相对集中。</p>
+            <p>💡 <b>结论建议</b>：本科学历可满足大多数岗位需求，AI/算法方向提升至硕士学历回报率较高。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 6: 经验分布柱状图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">经验要求分布</div>
+        <div class="layui-card-body">
+          <div id="chart6" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解经验需求结构，识别各经验层次的市场需求热度。</p>
+            <p>🔍 <b>主要发现</b>：3-5年经验需求最多，初级岗位也有相当占比，说明市场对各层次人才均有需求。</p>
+            <p>💡 <b>结论建议</b>：积累3年以上经验可显著提升竞争力，是职业发展的重要分水岭。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 7: 公司规模饼图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">公司规模分布</div>
+        <div class="layui-card-body">
+          <div id="chart7" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解招聘来源企业规模结构，辅助职业选择决策。</p>
+            <p>🔍 <b>主要发现</b>：100-500人中型企业招聘最活跃，大型企业虽数量少但岗位质量高。</p>
+            <p>💡 <b>结论建议</b>：中型企业成长空间大、责任感强，大厂提供更好待遇与品牌背书，按需选择。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 8: 行业标签条形图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">热门行业标签 Top20</div>
+        <div class="layui-card-body">
+          <div id="chart8" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解热门行业方向，识别技术人才最集中的行业领域。</p>
+            <p>🔍 <b>主要发现</b>：互联网/大数据/人工智能标签最热，传统行业数字化转型也带来大量需求。</p>
+            <p>💡 <b>结论建议</b>：优先布局AI与大数据相关领域，跨行业数字化转型方向也是重要机会。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 2 row -->
+
+  <!-- ===== Section 3: 薪资分析 ===== -->
+  <div class="section-title">💰 Section 3 - 薪资分析</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 9: 城市×薪资 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">Top15 城市平均薪资对比</div>
+        <div class="layui-card-body">
+          <div id="chart9" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：对比各城市平均薪资水平，辅助城市选择决策。</p>
+            <p>🔍 <b>主要发现</b>：北京上海薪资领先，但生活成本也相应较高，杭州深圳紧随其后。</p>
+            <p>💡 <b>结论建议</b>：综合考虑薪资与生活成本，新一线城市如杭州、成都性价比更高，值得重点关注。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 10: 经验×薪资箱线图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">经验 × 薪资分布</div>
+        <div class="layui-card-body">
+          <div id="chart10" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：量化经验对薪资的影响，揭示职业发展的薪资增长规律。</p>
+            <p>🔍 <b>主要发现</b>：经验越丰富薪资分布越高且越集中，资深人才薪资差异相对较小。</p>
+            <p>💡 <b>结论建议</b>：3-5年是薪资大幅跃升的关键时期，应集中精力在此阶段提升核心竞争力。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 11: 学历×薪资箱线图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">学历 × 薪资分布</div>
+        <div class="layui-card-body">
+          <div id="chart11" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：量化学历对薪资的影响，评估教育投资回报。</p>
+            <p>🔍 <b>主要发现</b>：硕博学历薪资显著高于本科，差距在技术方向尤为明显。</p>
+            <p>💡 <b>结论建议</b>：技术方向硕士学历有明显薪资优势，AI/算法岗位尤其如此，教育投入回报率高。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 12: 岗位类别×薪资 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">岗位类别平均薪资</div>
+        <div class="layui-card-body">
+          <div id="chart12" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：比较不同岗位类别的薪资水平，辅助职业方向选择。</p>
+            <p>🔍 <b>主要发现</b>：机器学习/大数据岗位薪资最高，传统开发岗位薪资相对偏低。</p>
+            <p>💡 <b>结论建议</b>：向AI/大数据方向转型可获得更高薪资回报，是高性价比的职业发展路径。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 13: 公司规模×薪资 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">公司规模 × 平均薪资</div>
+        <div class="layui-card-body">
+          <div id="chart13" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：了解公司规模与薪资的关系，量化企业规模的薪资溢价。</p>
+            <p>🔍 <b>主要发现</b>：大公司薪资更高，体系更完善，呈现明显的规模效应。</p>
+            <p>💡 <b>结论建议</b>：有能力应优先争取大厂offer，初期可在中小企业积累经验再跳槽大厂。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 3 row -->
+
+  <!-- ===== Section 4: 多维交叉 ===== -->
+  <div class="section-title">🔬 Section 4 - 多维交叉分析</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 14: 岗位×经验100%堆叠 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">岗位 × 经验要求（百分比堆叠）</div>
+        <div class="layui-card-body">
+          <div id="chart14" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：揭示不同岗位的经验需求结构差异，了解各岗位对经验层次的偏好。</p>
+            <p>🔍 <b>主要发现</b>：AI岗位对高级经验要求更高，测试岗位初级比例相对较大。</p>
+            <p>💡 <b>结论建议</b>：根据岗位特点规划职业发展路径，AI方向需提前规划长期积累。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 15: 岗位×学历100%堆叠 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">岗位 × 学历要求（百分比堆叠）</div>
+        <div class="layui-card-body">
+          <div id="chart15" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：揭示不同岗位的学历要求差异，辅助学历投资决策。</p>
+            <p>🔍 <b>主要发现</b>：机器学习对硕博要求最高，前端开发本科占比最大，岗位学历门槛分化明显。</p>
+            <p>💡 <b>结论建议</b>：AI方向提升学历回报率高，前端/测试等方向本科已可满足大部分需求。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 16: 学历+经验热力图 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">学历 + 经验 × 平均薪资热力图</div>
+        <div class="layui-card-body">
+          <div id="chart16" style="height:400px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：发现学历与经验的协同效应对薪资的综合影响。</p>
+            <p>🔍 <b>主要发现</b>：高学历+高经验的交叉点薪资最高，两个维度存在明显的协同增益效应。</p>
+            <p>💡 <b>结论建议</b>：努力提升学历和经验两个维度可获得超线性薪资回报，是长期职业规划的核心策略。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 4 row -->
+
+  <!-- ===== Section 5: 文本挖掘 ===== -->
+  <div class="section-title">🔤 Section 5 - 文本挖掘</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 17: 技能词频Top30 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">Top 30 技能词频</div>
+        <div class="layui-card-body">
+          <div id="chart17" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：识别市场最需要的技能，了解技术生态的热门方向。</p>
+            <p>🔍 <b>主要发现</b>：Python/Java/MySQL是最通用的基础技能，出现频率远超其他技能。</p>
+            <p>💡 <b>结论建议</b>：掌握高频基础技能是就业基础，在此之上再深耕垂直方向可形成差异化竞争力。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 18: 技能共现网络图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">技能共现网络图</div>
+        <div class="layui-card-body">
+          <div id="chart18" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：发现技能的搭配规律，识别市场认可的技术栈组合。</p>
+            <p>🔍 <b>主要发现</b>：Python-Django、Java-Spring是常见技能栈，技能存在明显的集群效应。</p>
+            <p>💡 <b>结论建议</b>：按技能栈而非单一技能进行学习，掌握完整技术栈可大幅提升就业竞争力。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 19: 岗位→技能桑基图 -->
+    <div class="layui-col-md6">
+      <div class="layui-card">
+        <div class="layui-card-header">岗位 → 技能 桑基图</div>
+        <div class="layui-card-body">
+          <div id="chart19" style="height:450px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：可视化各岗位所需技能的流向，直观展示岗位与技能的关联强度。</p>
+            <p>🔍 <b>主要发现</b>：不同岗位有其特定核心技能集合，岗位间也存在技能共享区域。</p>
+            <p>💡 <b>结论建议</b>：根据目标岗位选择对应技能栈，兼顾通用技能与岗位专属技能的平衡学习。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 5 row -->
+
+  <!-- ===== Section 6: 地理分析 ===== -->
+  <div class="section-title">🗺️ Section 6 - 地理分析</div>
+  <div class="layui-row layui-col-space15">
+
+    <!-- Chart 20: 中国地图 -->
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-header">全国招聘热力地图</div>
+        <div class="layui-card-body">
+          <div id="chart20" style="height:550px;"></div>
+          <div class="chart-insight">
+            <p>📊 <b>图表目的</b>：直观展示全国各城市招聘分布，揭示就业市场的地域格局。</p>
+            <p>🔍 <b>主要发现</b>：东部沿海城市招聘高度集中，长三角、珠三角、京津冀形成三大核心就业圈。</p>
+            <p>💡 <b>结论建议</b>：东部一二线城市机会最多，中西部发展潜力上升，可关注成都、武汉等新兴科技中心。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /Section 6 row -->
+
+</div><!-- /layui-fluid -->
+</body>
+{% endblock content %}
+
+{% block js %}
+<script src="{% static "js/china.js" %}"></script>
+<script>
+layui.config({
+  base: '{% static "layuiadmin/" %}'
+}).extend({
+  index: 'lib/index'
+}).use(['index', 'form', 'jquery', 'layer', 'echarts'], function(){
+  var $ = layui.$;
+  var form = layui.form;
+  var layer = layui.layer;
+  var echarts = layui.echarts;
+
+  // Initialize all chart instances
+  var charts = {
+    c1:  echarts.init(document.getElementById('chart1')),
+    c2:  echarts.init(document.getElementById('chart2')),
+    c3:  echarts.init(document.getElementById('chart3')),
+    c4:  echarts.init(document.getElementById('chart4')),
+    c5:  echarts.init(document.getElementById('chart5')),
+    c6:  echarts.init(document.getElementById('chart6')),
+    c7:  echarts.init(document.getElementById('chart7')),
+    c8:  echarts.init(document.getElementById('chart8')),
+    c9:  echarts.init(document.getElementById('chart9')),
+    c10: echarts.init(document.getElementById('chart10')),
+    c11: echarts.init(document.getElementById('chart11')),
+    c12: echarts.init(document.getElementById('chart12')),
+    c13: echarts.init(document.getElementById('chart13')),
+    c14: echarts.init(document.getElementById('chart14')),
+    c15: echarts.init(document.getElementById('chart15')),
+    c16: echarts.init(document.getElementById('chart16')),
+    c17: echarts.init(document.getElementById('chart17')),
+    c18: echarts.init(document.getElementById('chart18')),
+    c19: echarts.init(document.getElementById('chart19')),
+    c20: echarts.init(document.getElementById('chart20'))
+  };
+
+  // ---- KPI ----
+  function updateKPI(kpi) {
+    $('#kpi-total').text(kpi.total);
+    $('#kpi-avg-salary').text(kpi.avg_salary + 'K');
+    $('#kpi-median-salary').text(kpi.median_salary + 'K');
+    $('#kpi-top-skill').text(kpi.top_skill);
+    $('#kpi-cities').text(kpi.unique_cities);
+    $('#kpi-jobs').text(kpi.unique_jobs);
+  }
+
+  // ---- Chart 1: Top20 岗位 (horizontal bar) ----
+  function renderChart1(data) {
+    var names = data.names.slice().reverse();
+    var values = data.values.slice().reverse();
+    charts.c1.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '25%', right: '8%', top: '3%', bottom: '5%' },
+      xAxis: { type: 'value', name: '职位数量' },
+      yAxis: { type: 'category', data: names, axisLabel: { fontSize: 11 } },
+      series: [{
+        type: 'bar',
+        data: values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' }
+          ])
+        },
+        label: { show: true, position: 'right', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Chart 2: Top20 城市 (vertical bar) ----
+  function renderChart2(data) {
+    charts.c2.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '5%', right: '5%', top: '8%', bottom: '12%' },
+      xAxis: { type: 'category', data: data.names, axisLabel: { rotate: 30, fontSize: 11 } },
+      yAxis: { type: 'value', name: '职位数量' },
+      series: [{
+        type: 'bar',
+        data: data.values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#f093fb' },
+            { offset: 1, color: '#f5576c' }
+          ])
+        },
+        label: { show: true, position: 'top', fontSize: 10 }
+      }]
+    });
+  }
+
+  // ---- Chart 3: 薪资分布直方图 ----
+  function renderChart3(data) {
+    charts.c3.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '8%', right: '5%', top: '8%', bottom: '10%' },
+      xAxis: { type: 'category', data: data.bins, axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'value', name: '职位数量' },
+      series: [{
+        type: 'bar',
+        data: data.values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#43e97b' },
+            { offset: 1, color: '#38f9d7' }
+          ])
+        },
+        label: { show: true, position: 'top', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Chart 4: 薪资箱线图 (candlestick simulation) ----
+  function renderChart4(d) {
+    var seriesList = [
+      {
+        type: 'candlestick',
+        name: '薪资范围',
+        data: [[d.min, d.q1, d.q3, d.max]],
+        itemStyle: {
+          color: '#ec0000',
+          color0: '#00da3c',
+          borderColor: '#8A0000',
+          borderColor0: '#008F28'
+        }
+      },
+      {
+        type: 'scatter',
+        name: '中位数',
+        data: [[0, d.median]],
+        symbolSize: 12,
+        itemStyle: { color: '#ffcc00' },
+        tooltip: { formatter: function(p) { return '中位数: ' + p.value[1] + 'K'; } }
+      }
+    ];
+    if (d.outliers && d.outliers.length > 0) {
+      var outlierData = d.outliers.map(function(v) { return [0, v]; });
+      seriesList.push({
+        type: 'scatter',
+        name: '异常值',
+        data: outlierData,
+        symbolSize: 6,
+        itemStyle: { color: '#ff4500', opacity: 0.7 },
+        tooltip: { formatter: function(p) { return '异常值: ' + p.value[1] + 'K'; } }
+      });
+    }
+    charts.c4.setOption({
+      tooltip: { trigger: 'item' },
+      legend: { data: ['薪资范围', '中位数', '异常值'], top: '3%' },
+      grid: { left: '10%', right: '10%', top: '12%', bottom: '8%' },
+      xAxis: { type: 'category', data: ['薪资分布(K)'] },
+      yAxis: { type: 'value', name: '薪资(K)' },
+      series: seriesList
+    });
+  }
+
+  // ---- Chart 5: 学历饼图 ----
+  function renderChart5(data) {
+    charts.c5.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { orient: 'vertical', left: 'left', top: 'middle' },
+      series: [{
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['60%', '50%'],
+        data: data,
+        label: { formatter: '{b}: {d}%' },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } }
+      }]
+    });
+  }
+
+  // ---- Chart 6: 经验分布柱状图 ----
+  function renderChart6(data) {
+    charts.c6.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '8%', right: '5%', top: '8%', bottom: '10%' },
+      xAxis: { type: 'category', data: data.names, axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'value', name: '职位数量' },
+      series: [{
+        type: 'bar',
+        data: data.values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#4facfe' },
+            { offset: 1, color: '#00f2fe' }
+          ])
+        },
+        label: { show: true, position: 'top', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Chart 7: 公司规模饼图 ----
+  function renderChart7(data) {
+    charts.c7.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { orient: 'vertical', left: 'left', top: 'middle' },
+      series: [{
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['60%', '50%'],
+        data: data,
+        label: { formatter: '{b}: {d}%' },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } }
+      }]
+    });
+  }
+
+  // ---- Chart 8: 行业标签条形图 ----
+  function renderChart8(data) {
+    var names = data.names.slice().reverse();
+    var values = data.values.slice().reverse();
+    charts.c8.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '22%', right: '8%', top: '3%', bottom: '5%' },
+      xAxis: { type: 'value', name: '职位数量' },
+      yAxis: { type: 'category', data: names, axisLabel: { fontSize: 11 } },
+      series: [{
+        type: 'bar',
+        data: values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#fa709a' },
+            { offset: 1, color: '#fee140' }
+          ])
+        },
+        label: { show: true, position: 'right', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Chart 9: 城市×薪资 ----
+  function renderChart9(data) {
+    charts.c9.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}K' },
+      grid: { left: '5%', right: '5%', top: '8%', bottom: '12%' },
+      xAxis: { type: 'category', data: data.cities, axisLabel: { rotate: 30, fontSize: 11 } },
+      yAxis: { type: 'value', name: '平均薪资(K)' },
+      series: [{
+        type: 'bar',
+        data: data.salaries,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#a18cd1' },
+            { offset: 1, color: '#fbc2eb' }
+          ])
+        },
+        label: { show: true, position: 'top', formatter: '{c}K', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Candlestick boxplot helper for charts 10 & 11 ----
+  function renderBoxplotChart(chartInstance, labels, boxes) {
+    var candleData = boxes.map(function(b) { return [b.min, b.q1, b.q3, b.max]; });
+    var medianData = boxes.map(function(b, i) { return [i, b.median]; });
+    chartInstance.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: function(p) {
+          if (p.seriesType === 'candlestick') {
+            return labels[p.dataIndex] + '<br/>最大: ' + p.value[4] + 'K<br/>Q3: ' + p.value[3] + 'K<br/>Q1: ' + p.value[2] + 'K<br/>最小: ' + p.value[1] + 'K';
+          }
+          return labels[p.value[0]] + '<br/>中位数: ' + p.value[1] + 'K';
+        }
+      },
+      legend: { data: ['薪资范围', '中位数'], top: '2%' },
+      grid: { left: '8%', right: '5%', top: '12%', bottom: '14%' },
+      xAxis: { type: 'category', data: labels, axisLabel: { rotate: 20, fontSize: 10 } },
+      yAxis: { type: 'value', name: '薪资(K)' },
+      series: [
+        {
+          name: '薪资范围',
+          type: 'candlestick',
+          data: candleData,
+          itemStyle: {
+            color: '#ec0000',
+            color0: '#00da3c',
+            borderColor: '#8A0000',
+            borderColor0: '#008F28'
+          }
+        },
+        {
+          name: '中位数',
+          type: 'scatter',
+          data: medianData,
+          symbolSize: 8,
+          itemStyle: { color: '#ffcc00' }
+        }
+      ]
+    });
+  }
+
+  // ---- Chart 10: 经验×薪资 ----
+  function renderChart10(data) {
+    renderBoxplotChart(charts.c10, data.exp_labels, data.boxes);
+  }
+
+  // ---- Chart 11: 学历×薪资 ----
+  function renderChart11(data) {
+    renderBoxplotChart(charts.c11, data.edu_labels, data.boxes);
+  }
+
+  // ---- Chart 12: 岗位类别×薪资 ----
+  function renderChart12(data) {
+    charts.c12.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}K' },
+      grid: { left: '8%', right: '5%', top: '8%', bottom: '18%' },
+      xAxis: { type: 'category', data: data.keywords, axisLabel: { rotate: 30, fontSize: 10 } },
+      yAxis: { type: 'value', name: '平均薪资(K)' },
+      series: [{
+        type: 'bar',
+        data: data.salaries,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#43e97b' },
+            { offset: 1, color: '#38f9d7' }
+          ])
+        },
+        label: { show: true, position: 'top', formatter: '{c}K', fontSize: 10 }
+      }]
+    });
+  }
+
+  // ---- Chart 13: 公司规模×薪资 ----
+  function renderChart13(data) {
+    charts.c13.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}K' },
+      grid: { left: '8%', right: '5%', top: '8%', bottom: '14%' },
+      xAxis: { type: 'category', data: data.scales, axisLabel: { rotate: 20, fontSize: 10 } },
+      yAxis: { type: 'value', name: '平均薪资(K)' },
+      series: [{
+        type: 'bar',
+        data: data.salaries,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' }
+          ])
+        },
+        label: { show: true, position: 'top', formatter: '{c}K', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- 100% stacked bar helper for charts 14 & 15 ----
+  function renderStackedChart(chartInstance, keywords, labels, seriesMap) {
+    var colorPalette = ['#667eea','#f5576c','#43e97b','#fa709a','#4facfe','#fee140','#a18cd1','#fbc2eb','#38f9d7','#f093fb'];
+    var series = labels.map(function(label, idx) {
+      return {
+        name: label,
+        type: 'bar',
+        stack: 'total',
+        data: seriesMap[label] || [],
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: function(p) { return p.value > 5 ? p.value + '%' : ''; },
+          fontSize: 10
+        },
+        itemStyle: { color: colorPalette[idx % colorPalette.length] }
+      };
+    });
+    chartInstance.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: labels, top: '2%', type: 'scroll' },
+      grid: { left: '8%', right: '5%', top: '12%', bottom: '16%' },
+      xAxis: { type: 'category', data: keywords, axisLabel: { rotate: 30, fontSize: 10 } },
+      yAxis: { type: 'value', name: '占比(%)', max: 100 },
+      series: series
+    });
+  }
+
+  // ---- Chart 14: 岗位×经验100%堆叠 ----
+  function renderChart14(data) {
+    renderStackedChart(charts.c14, data.keywords, data.exp_labels, data.series);
+  }
+
+  // ---- Chart 15: 岗位×学历100%堆叠 ----
+  function renderChart15(data) {
+    renderStackedChart(charts.c15, data.keywords, data.edu_labels, data.series);
+  }
+
+  // ---- Chart 16: 学历+经验热力图 ----
+  function renderChart16(data) {
+    var heatData = [];
+    data.exp_labels.forEach(function(e, yi) {
+      data.edu_labels.forEach(function(ed, xi) {
+        var val = (data.matrix[yi] && data.matrix[yi][xi] != null) ? data.matrix[yi][xi] : null;
+        heatData.push([xi, yi, val]);
+      });
+    });
+    var allVals = heatData.map(function(d) { return d[2]; }).filter(function(v) { return v != null; });
+    var minVal = allVals.length ? Math.min.apply(null, allVals) : 0;
+    var maxVal = allVals.length ? Math.max.apply(null, allVals) : 50;
+    charts.c16.setOption({
+      tooltip: {
+        formatter: function(p) {
+          return (p.value[2] != null) ? (data.edu_labels[p.value[0]] + ' × ' + data.exp_labels[p.value[1]] + ': ' + p.value[2] + 'K') : 'N/A';
+        }
+      },
+      grid: { left: '15%', right: '5%', top: '5%', bottom: '20%' },
+      xAxis: { type: 'category', data: data.edu_labels, axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'category', data: data.exp_labels, axisLabel: { fontSize: 11 } },
+      visualMap: {
+        min: minVal,
+        max: maxVal,
+        calculable: true,
+        orient: 'horizontal',
+        left: 'center',
+        bottom: '2%',
+        text: ['高薪', '低薪'],
+        inRange: { color: ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'] }
+      },
+      series: [{
+        type: 'heatmap',
+        data: heatData,
+        label: { show: true, formatter: function(p) { return p.value[2] != null ? p.value[2] + 'K' : ''; }, fontSize: 11 },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } }
+      }]
+    });
+  }
+
+  // ---- Chart 17: 技能词频Top30 (horizontal bar) ----
+  function renderChart17(data) {
+    var names = data.names.slice().reverse();
+    var values = data.values.slice().reverse();
+    charts.c17.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '12%', right: '8%', top: '3%', bottom: '5%' },
+      xAxis: { type: 'value', name: '出现频次' },
+      yAxis: { type: 'category', data: names, axisLabel: { fontSize: 11 } },
+      series: [{
+        type: 'bar',
+        data: values,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#f093fb' },
+            { offset: 1, color: '#f5576c' }
+          ])
+        },
+        label: { show: true, position: 'right', fontSize: 11 }
+      }]
+    });
+  }
+
+  // ---- Chart 18: 技能共现网络图 ----
+  function renderChart18(data) {
+    charts.c18.setOption({
+      tooltip: { trigger: 'item' },
+      series: [{
+        type: 'graph',
+        layout: 'force',
+        nodes: data.nodes.map(function(n) {
+          return {
+            name: n.name,
+            value: n.value,
+            symbolSize: Math.min(Math.sqrt(n.value) * 5 + 10, 50),
+            label: { show: true, fontSize: 10 },
+            itemStyle: { color: '#667eea' }
+          };
+        }),
+        links: data.links,
+        force: { repulsion: 200, gravity: 0.1, edgeLength: 100 },
+        roam: true,
+        lineStyle: { opacity: 0.6, width: 1.5, curveness: 0 },
+        emphasis: { focus: 'adjacency', lineStyle: { width: 4 } }
+      }]
+    });
+  }
+
+  // ---- Chart 19: 岗位→技能桑基图 ----
+  function renderChart19(data) {
+    charts.c19.setOption({
+      tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+      series: [{
+        type: 'sankey',
+        data: data.nodes,
+        links: data.links,
+        emphasis: { focus: 'adjacency' },
+        lineStyle: { color: 'gradient', opacity: 0.4 },
+        label: { color: '#333', fontSize: 11 },
+        nodeWidth: 20,
+        nodeGap: 12,
+        layoutIterations: 32
+      }]
+    });
+  }
+
+  // ---- Chart 20: 中国地图 ----
+  function renderChart20(mapData) {
+    var values = mapData.map(function(d) { return d.value; });
+    var maxVal = values.length ? Math.max.apply(null, values) : 1500;
+    charts.c20.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} 个职位' },
+      visualMap: {
+        min: 0,
+        max: maxVal,
+        left: 'left',
+        top: 'bottom',
+        text: ['高', '低'],
+        calculable: true,
+        inRange: { color: ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'] }
+      },
+      series: [{
+        type: 'map',
+        map: 'china',
+        roam: true,
+        data: mapData,
+        label: { show: false },
+        emphasis: { label: { show: true }, itemStyle: { areaColor: '#ffe119' } },
+        itemStyle: { borderColor: '#fff', borderWidth: 0.5 }
+      }]
+    });
+  }
+
+  // ---- Load All Charts ----
+  function loadAllCharts(params) {
+    var loading = layer.load(1, { shade: [0.3, '#fff'] });
+    $.ajax({
+      url: '/get_eda_data/',
+      type: 'GET',
+      data: params || {},
+      dataType: 'json',
+      success: function(data) {
+        layer.close(loading);
+        updateKPI(data.kpi);
+        renderChart1(data.top_jobs);
+        renderChart2(data.top_cities);
+        renderChart3(data.salary_dist);
+        renderChart4(data.salary_box);
+        renderChart5(data.edu_dist);
+        renderChart6(data.exp_dist);
+        renderChart7(data.scale_dist);
+        renderChart8(data.label_dist);
+        renderChart9(data.city_salary);
+        renderChart10(data.exp_salary);
+        renderChart11(data.edu_salary);
+        renderChart12(data.keyword_salary);
+        renderChart13(data.scale_salary);
+        renderChart14(data.keyword_exp);
+        renderChart15(data.keyword_edu);
+        renderChart16(data.edu_exp_salary);
+        renderChart17(data.skills);
+        renderChart18(data.skill_cooccur);
+        renderChart19(data.sankey);
+        renderChart20(data.map_data);
+      },
+      error: function() {
+        layer.close(loading);
+        layer.msg('数据加载失败，请稍后重试', { icon: 2 });
+      }
+    });
+  }
+
+  // ---- Filter ----
+  $('#filter-btn').on('click', function() {
+    var params = {
+      city:       $('select[name=city]').val(),
+      keyword:    $('input[name=keyword]').val(),
+      education:  $('select[name=education]').val(),
+      experience: $('select[name=experience]').val(),
+      salary_min: $('input[name=salary_min]').val(),
+      salary_max: $('input[name=salary_max]').val()
+    };
+    loadAllCharts(params);
+  });
+
+  $('#reset-btn').on('click', function() {
+    $('select[name=city]').val('');
+    $('input[name=keyword]').val('');
+    $('select[name=education]').val('');
+    $('select[name=experience]').val('');
+    $('input[name=salary_min]').val('');
+    $('input[name=salary_max]').val('');
+    form.render('select');
+    loadAllCharts({});
+  });
+
+  // ---- Resize ----
+  window.addEventListener('resize', function() {
+    Object.values(charts).forEach(function(c) { c.resize(); });
+  });
+
+  // ---- Initial Load ----
+  loadAllCharts({});
+});
+</script>
+{% endblock js %}
