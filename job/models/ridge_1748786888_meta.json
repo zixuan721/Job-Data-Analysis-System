@@ -1,0 +1,36 @@
+{
+    "model_type": "ridge",
+    "model_filename": "ridge_1748786888.pkl",
+    "created_time": "2026-01-09 22:08:08",
+    "categorical_features": [
+        "education",
+        "experience",
+        "place",
+        "scale",
+        "key_word",
+        "position_level",
+        "position_popularity_bin",
+        "city_popularity_bin"
+    ],
+    "numerical_features": [
+        "salary_ratio",
+        "position_popularity",
+        "city_popularity"
+    ],
+    "results": {
+        "model_type": "ridge",
+        "min_salary": {
+            "mae": 0.4359239185338517,
+            "r2": 0.03466694743389431,
+            "mae_orig": 7.782633325828103,
+            "r2_orig": -0.06564933203497958
+        },
+        "max_salary": {
+            "mae": 0.30041752081429735,
+            "r2": 0.48691264346822816,
+            "mae_orig": 7.23009298393346,
+            "r2_orig": 0.4336974256791355
+        },
+        "feature_importance": {}
+    }
+}

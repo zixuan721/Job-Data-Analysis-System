@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}错误 - 职位推荐系统{% endblock %}
+
+{% block content %}
+<div class="layui-container" style="margin-top: 50px;">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <i class="layui-icon layui-icon-face-cry" style="font-size: 20px; color: #FF5722;"></i>
+            <span style="font-size: 18px; font-weight: bold;">出错了</span>
+        </div>
+        <div class="layui-card-body">
+            <p style="font-size: 16px; color: #666;">{{ message|default:"未知错误" }}</p>
+            
+            <div style="margin-top: 30px;">
+                <a href="/" class="layui-btn layui-btn-primary">返回首页</a>
+                <a href="javascript:history.back();" class="layui-btn">返回上一页</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

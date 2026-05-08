@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+  <div class="layui-fluid">
+    <!-- 筛选条件 -->
+    <div class="layui-card">
+      <div class="layui-card-header">数据筛选</div>
+      <div class="layui-card-body">
+        <form class="layui-form" id="filter-form" lay-filter="filter-form">
+          <div class="layui-form-item">
+
+            
+            <div class="layui-inline">
+              <label class="layui-form-label">工作地点</label>
+              <div class="layui-input-inline">
+                <select name="city" id="city">
+                  <option value="">请选择城市</option>
+                  <option value="北京">北京</option>
+                  <option value="上海">上海</option>
+                  <option value="广州">广州</option>
+                  <option value="深圳">深圳</option>
+                  <option value="杭州">杭州</option>
+                  <option value="南京">南京</option>
+                  <option value="成都">成都</option>
+                  <option value="武汉">武汉</option>
+                  <option value="西安">西安</option>
+                  <option value="天津">天津</option>
+                  <option value="重庆">重庆</option>
+                  <option value="苏州">苏州</option>
+                  <option value="大连">大连</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="layui-inline">
+              <label class="layui-form-label">学历要求</label>
+              <div class="layui-input-inline">
+                <select name="education" id="education">
+                  <option value="">请选择学历</option>
+                  <option value="博士">博士</option>
+                  <option value="硕士">硕士</option>
+                  <option value="本科">本科</option>
+                  <option value="大专">大专</option>
+                  <option value="不限">不限</option>
+                </select>
+              </div>
+            </div>
+            
+
+            <div class="layui-inline">
+              <button type="button" class="layui-btn" id="filter-btn">筛选数据</button>
+              <button type="button" class="layui-btn layui-btn-primary" id="reset-btn">重置</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- 图表说明区 -->
+    <div class="layui-card">
+      <div class="layui-card-header">数据说明</div>
+      <div class="layui-card-body">
+        <div class="layui-row">
+          <div class="layui-col-md12">
+            <div class="layui-badge-rim" id="filter-info" style="padding: 10px; margin-bottom: 10px; display: none;">
+              当前筛选条件: <span id="current-filter"></span>
+              <br>
+              筛选结果: <span id="result-count"></span> 条职位数据
+            </div>
+            <ul>
+              <li><b>薪资分布：</b>展示不同薪资范围的职位数量占比，反映就业市场各薪资段的分布情况。</li>
+              <li><b>学历要求分布：</b>展示各学历要求的职位数量占比，帮助求职者了解不同学历的就业机会分布。</li>
+              <li><b>职位关键词分布：</b>统计职位关键词出现频率，显示最热门的15个职位关键词，反映市场需求方向。</li>
+              <li><b>城市职位分布：</b>展示全部职位数据中各城市的职位数量，帮助求职者了解各地区就业机会分布情况(全局数据，不受筛选条件影响)。</li>
+            </ul>
+            <p>您可以通过上方筛选条件，按职位关键词、工作地点、学历要求、公司规模等维度筛选数据，查看符合条件的职位分布情况。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 图表展示区域 -->
+    <div class="layui-row layui-col-space15">
+      <!-- 薪资分布饼图 -->
+      <div class="layui-col-md6">
+        <div class="layui-card">
+          <div class="layui-card-header">薪资待遇分布</div>
+          <div class="layui-card-body">
+            <div id="salary-chart" style="height: 400px;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 学历分布饼图 -->
+      <div class="layui-col-md6">
+        <div class="layui-card">
+          <div class="layui-card-header">学历要求分布</div>
+          <div class="layui-card-body">
+            <div id="education-chart" style="height: 400px;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 职位关键词柱状图 -->
+      <div class="layui-col-md12">
+        <div class="layui-card">
+          <div class="layui-card-header">职位关键词分布</div>
+          <div class="layui-card-body">
+            <div id="keyword-chart" style="height: 400px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 城市职位数量柱状图 -->
+      <div class="layui-col-md12">
+        <div class="layui-card">
+          <div class="layui-card-header">城市职位分布</div>
+          <div class="layui-card-body">
+            <div id="city-chart" style="height: 400px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+
+{% block js %}
+<script>
+layui.config({
+  base: '{% static "layuiadmin/" %}' //静态资源所在路径
+}).extend({
+  index: 'lib/index' //主入口模块
+}).use(['index', 'form', 'jquery', 'layer', 'echarts'], function(){
+  var $ = layui.$;
+  var form = layui.form;
+  var layer = layui.layer;
+  var echarts = layui.echarts;
+  
+  console.log("Layui form对象:", form);
+  
+  // 初始化图表对象
+  var salaryChart = echarts.init(document.getElementById('salary-chart'));
+  var educationChart = echarts.init(document.getElementById('education-chart'));
+  var keywordChart = echarts.init(document.getElementById('keyword-chart'));
+  var cityChart = echarts.init(document.getElementById('city-chart'));
+  
+  // 加载数据并渲染图表
+  function loadChartData(params) {
+    // 显示加载动画
+    salaryChart.showLoading();
+    educationChart.showLoading();
+    keywordChart.showLoading();
+    cityChart.showLoading();
+    
+    console.log("AJAX 请求参数:", params);
+    
+    $.ajax({
+      type: 'GET',
+      url: '/get_chart_data/',
+      data: params,
+      success: function(res) {
+        console.log("AJAX 返回数据:", res);
+        if(res.code === 0) {
+          // 显示筛选条件和结果数量
+          var totalCount = res.total_count;  // 直接使用后端返回的总数量
+          
+          console.log("薪资分布数据:", res.salary_data);
+          console.log("总职位数量:", totalCount);
+          console.log("城市分布数据第一项:", res.city_data.x[0], res.city_data.y[0]);
+          
+          if(params.keyword || params.city || params.education || params.scale) {
+            var filterText = [];
+            if(params.keyword) filterText.push("职位关键词: " + params.keyword);
+            if(params.city) filterText.push("工作地点: " + params.city);
+            if(params.education) filterText.push("学历要求: " + params.education);
+            if(params.scale) filterText.push("公司规模: " + params.scale);
+            
+            $('#current-filter').text(filterText.join(", "));
+            $('#result-count').text(totalCount);
+            $('#filter-info').show();
+          } else {
+            $('#filter-info').hide();
+          }
+          
+          // 薪资分布饼图
+          salaryChart.setOption({
+            title: {
+              text: '薪资分布',
+              subtext: '统计不同薪资范围的职位数量',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'item',
+              formatter: '{a} <br/>{b}: {c}个职位 ({d}%)'
+            },
+            legend: {
+              
+              right: 10,
+              top: 'center',
+              itemWidth: 10,
+              itemHeight: 10,
+              textStyle: {
+                fontSize: 12
+              },
+              data: res.salary_data.map(function(item) { return item.name; })
+            },
+            series: [{
+              name: '薪资待遇',
+              type: 'pie',
+              radius: '60%',
+              center: ['50%', '50%'],
+              data: res.salary_data,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }]
+          });
+          
+          // 学历分布饼图
+          educationChart.setOption({
+            title: {
+              text: '学历要求分布',
+              subtext: '统计不同学历要求的职位数量',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'item',
+              formatter: '{a} <br/>{b}: {c}个职位 ({d}%)'
+            },
+            legend: {
+              
+              right: 10,
+              top: 'center',
+              itemWidth: 10,
+              itemHeight: 10,
+              textStyle: {
+                fontSize: 12
+              },
+              data: res.edu_data.map(function(item) { return item.name; })
+            },
+            series: [{
+              name: '学历要求',
+              type: 'pie',
+              radius: '60%',
+              center: ['50%', '50%'],
+              data: res.edu_data,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }]
+          });
+          
+          // 职位关键词柱状图
+          keywordChart.setOption({
+            title: {
+              text: '职位关键词分布',
+              subtext: '统计筛选结果中出现频率最高的15个职位关键词',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: {
+                type: 'shadow'
+              },
+              formatter: '{b}: {c}个职位'
+            },
+            legend: {
+              data: ['职位数量'],
+              top: '10%'
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              top: '20%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              data: res.keyword_data.x,
+              axisLabel: {
+                interval: 0,
+                rotate: 30
+              }
+            },
+            yAxis: {
+              type: 'value'
+            },
+            series: [{
+              name: '职位数量',
+              type: 'bar',
+              data: res.keyword_data.y,
+              itemStyle: {
+                normal: {
+                  label: {
+                    show: true,
+                    position: 'top'
+                  }
+                }
+              }
+            }]
+          });
+          
+          // 城市职位分布柱状图
+          cityChart.setOption({
+            title: {
+              text: '城市职位分布(全局数据)',
+              subtext: '统计全部职位中数量最多的10个城市，不受筛选条件影响',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: {
+                type: 'shadow'
+              },
+              formatter: '{b}: {c}个职位'
+            },
+            legend: {
+              data: ['职位数量'],
+              top: '10%'
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              top: '20%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              data: res.city_data.x
+            },
+            yAxis: {
+              type: 'value'
+            },
+            series: [{
+              name: '职位数量',
+              type: 'bar',
+              data: res.city_data.y,
+              itemStyle: {
+                normal: {
+                  label: {
+                    show: true,
+                    position: 'top'
+                  }
+                }
+              }
+            }]
+          });
+        } else {
+          layer.msg('获取数据失败：' + res.msg);
+        }
+        
+        // 隐藏加载动画
+        salaryChart.hideLoading();
+        educationChart.hideLoading();
+        keywordChart.hideLoading();
+        cityChart.hideLoading();
+      },
+      error: function() {
+        layer.msg('获取数据失败，请稍后再试');
+        salaryChart.hideLoading();
+        educationChart.hideLoading();
+        keywordChart.hideLoading();
+        cityChart.hideLoading();
+      }
+    });
+  }
+  
+  // 初始加载数据
+  loadChartData({});
+  
+  // 窗口大小调整时，重新适应图表大小
+  window.addEventListener('resize', function() {
+    salaryChart.resize();
+    educationChart.resize();
+    keywordChart.resize();
+    cityChart.resize();
+  });
+  
+  // 点击筛选按钮
+  $('#filter-btn').click(function() {
+    // 直接获取表单数据
+    var keyword = $('input[name="keyword"]').val();
+    var city = $('select[name="city"]').val();
+    var education = $('select[name="education"]').val();
+    var scale = $('select[name="scale"]').val();
+    
+    var formData = {
+      keyword: keyword || '',
+      city: city || '',
+      education: education || '',
+      scale: scale || ''
+    };
+    
+    console.log("筛选按钮点击，表单数据:", formData);
+    
+    // 使用表单数据
+    loadChartData(formData);
+  });
+  
+  // 点击重置按钮
+  $('#reset-btn').click(function() {
+    $('#filter-form')[0].reset();
+    form.render();
+    loadChartData({});
+  });
+});
+</script>
+{% endblock %} 

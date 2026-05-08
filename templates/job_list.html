@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+  <div class="layui-fluid">
+    <div class="layui-card">
+      <div class="layui-form layui-card-header layuiadmin-card-header-auto">
+          <input type="hidden" id="keyword" autocomplete="off" class="layui-input" value="">
+          <input type="hidden" id="price_min" autocomplete="off" class="layui-input" value="">
+          <input type="hidden" id="price_max" autocomplete="off" class="layui-input" value="">
+          <input type="hidden" id="edu" autocomplete="off" class="layui-input" value="">
+          <input type="hidden" id="city" autocomplete="off" class="layui-input" value="">
+        <div class="layui-form-item">
+          <div class="layui-inline">
+            <label class="layui-form-label">岗位名称</label>
+            <div class="layui-input-inline">
+              <input type="text" name="keyword" id="keyword_1" placeholder="输入职位关键字" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">薪资区间(K)</label>
+            <div class="layui-input-inline" style="width: 100px;">
+                <input type="text" name="price_min" id="price_min_1" placeholder="￥" autocomplete="off" class="layui-input" value="">
+          </div>
+          <div class="layui-form-mid">-</div>
+          <div class="layui-input-inline" style="width: 100px;">
+            <input type="text" name="price_max" id="price_max_1" placeholder="￥" autocomplete="off" class="layui-input" value="">
+          </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">学历要求</label>
+            <div class="layui-input-inline">
+              <select name="edu" id="edu_1">
+                <option value="">请选择学历</option>
+                <option value="博士">博士</option>
+                <option value="硕士">硕士</option>
+                <option value="本科">本科</option>
+                <option value="大专">大专</option>
+                <option value="不限">经验不限</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-inline">
+            <label class="layui-form-label">工作地点</label>
+            <div class="layui-input-inline">
+              <select name="city" id="city_1">
+                <option value="">请选择城市</option>
+                <option value="北京">北京</option>
+                <option value="上海">上海</option>
+                <option value="天津">天津</option>
+                <option value="重庆">重庆</option>
+                <option value="广州">广州</option>
+                <option value="深圳">深圳</option>
+                <option value="苏州">苏州</option>
+                <option value="南京">南京</option>
+                <option value="杭州">杭州</option>
+                <option value="大连">大连</option>
+                <option value="成都">成都</option>
+                <option value="武汉">武汉</option>
+                <option value="西安">西安</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-inline">
+            <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-app-forumlist-search">
+              <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="layui-card-body">
+          <table id="LAY-app-forum-list" lay-filter="LAY-app-forum-list"></table>
+          {% verbatim %}
+            <!-- 操作按钮模板 -->
+            <script type="text/html" id="table-forum-list">
+              <!-- 收藏按钮 -->
+              {{#  if(d.is_favorite){ }}
+              <a class="layui-btn layui-btn-sm layui-btn-warm" lay-event="unfavorite"><i class="layui-icon layui-icon-star-fill"></i>已收藏</a>
+              {{#  } else { }}
+              <a class="layui-btn layui-btn-sm layui-btn-primary" lay-event="favorite"><i class="layui-icon layui-icon-star"></i>收藏</a>
+              {{#  } }}
+              
+              <!-- 投递按钮 -->
+              {{#  if(d.send_key == 0){ }}
+              <a class="layui-btn layui-btn-sm layui-btn-sm" lay-event="send"><i class="layui-icon layui-icon-add-circle-fine"></i>投递</a>
+              {{#  } else { }}
+              <a class="layui-btn layui-btn-sm layui-btn-normal" lay-event="send_1">已投递</a>
+              {{#  } }}
+            </script>
+            
+            <!-- 评分模板 -->
+            <script type="text/html" id="ratingTpl">
+              <div class="layui-rate" id="rating-{{d.job_id}}" data-value="{{d.rating}}"></div>
+            </script>
+          {% endverbatim %}
+      </div>
+    </div>
+  </div>
+  </body>
+{% endblock %}
+
+{% block js %}
+  <script>
+  layui.config({
+    base: '{% static "layuiadmin/" %}' //静态资源所在路径
+  }).extend({
+    index: 'lib/index' //主入口模块
+  }).use(['index', 'forum', 'table', 'rate'], function() {
+      var $ = layui.$,
+          form = layui.form,
+          table = layui.table,
+          rate = layui.rate;
+
+      // 初始化表格
+      table.render({
+        elem: '#LAY-app-forum-list',
+        url: '/get_job_list/',
+        cols: [[
+          {field: 'job_id', width: 80, title: 'ID', sort: true},
+          {field: 'name', title: '职位名称', width: 130},
+          {field: 'salary', title: '薪资', width: 110},
+          {field: 'place', title: '工作地点', width: 120},
+          {field: 'education', title: '学历要求', width: 100},
+          {field: 'company', title: '公司名称'},
+          {field: 'rating', title: '评分', width: 200, templet: '#ratingTpl'},
+          {title: '操作', width: 220, align: 'center', toolbar: '#table-forum-list'}
+        ]],
+        page: true,
+        limit: 10,
+        where: {
+          keyword: $("#keyword").val(),
+          price_min: $("#price_min").val(),
+          price_max: $("#price_max").val(),
+          edu: $("#edu").val(),
+          city: $("#city").val()
+        },
+        done: function(res, curr, count) {
+          // 渲染评分组件
+          layui.each(res.data, function(index, item) {
+            rate.render({
+              elem: '#rating-' + item.job_id,
+              value: item.rating || 0,
+              text: true,
+              half: false,
+              readonly: false,
+              choose: function(value) {
+                // 评分选择后提交
+                $.ajax({
+                  type: 'POST',
+                  url: '/job_rate/',
+                  data: {
+                    job_id: item.job_id,
+                    rating: value
+                  },
+                  success: function(res) {
+                    if(res.code === 0) {
+                      layer.msg(res.msg);
+                    } else {
+                      layer.msg(res.msg);
+                    }
+                  }
+                });
+              }
+            });
+          });
+        }
+      });
+
+      //监听搜索
+      form.on('submit(LAY-app-forumlist-search)', function (data) {
+          var field = data.field;
+          console.log(notNumber(field.price_min))
+          console.log(field.price_min == "")
+          if(field.price_min != ""){
+              if(notNumber(field.price_min)){
+                  console.log(field.price_min)
+              layer.msg("薪资区间应为数字！");
+              return false
+              }
+          }
+          if(field.price_max != ""){
+              if(notNumber(field.price_max)){
+                  console.log(field.price_max)
+              layer.msg("薪资区间应为数字！");
+              return false
+              }
+          }
+
+          //执行重载
+          table.reload('LAY-app-forum-list', {
+              page:{curr:1},
+              where: field
+          });
+      });
+      
+      // 监听工具条事件
+      table.on('tool(LAY-app-forum-list)', function(obj) {
+        var data = obj.data;
+        if(obj.event === 'send') {
+          // 投递职位
+          layer.confirm('确定投递该职位?', function(index) {
+            $.ajax({
+              type: 'POST',
+              url: '/send_job/',
+              data: {
+                job_id: data.job_id,
+                send_key: 0
+              },
+              success: function(res) {
+                if(res.Code === 0) {
+                  layer.msg(res.msg);
+                  // 重载表格
+                  table.reload('LAY-app-forum-list');
+                }
+              }
+            });
+            layer.close(index);
+          });
+        } else if(obj.event === 'send_1') {
+          // 取消投递
+          layer.confirm('确定取消投递该职位?', function(index) {
+            $.ajax({
+              type: 'POST',
+              url: '/send_job/',
+              data: {
+                job_id: data.job_id,
+                send_key: 1
+              },
+              success: function(res) {
+                if(res.Code === 0) {
+                  layer.msg(res.msg);
+                  // 重载表格
+                  table.reload('LAY-app-forum-list');
+                }
+              }
+            });
+            layer.close(index);
+          });
+        } else if(obj.event === 'favorite' || obj.event === 'unfavorite') {
+          // 切换收藏状态
+          $.ajax({
+            type: 'POST',
+            url: '/toggle_favorite/',
+            data: {
+              job_id: data.job_id
+            },
+            success: function(res) {
+              if(res.code === 0) {
+                layer.msg(res.msg);
+                // 重载表格
+                table.reload('LAY-app-forum-list');
+              } else {
+                layer.msg(res.msg);
+              }
+            }
+          });
+        }
+      });
+
+      // 添加全局样式以确保表格显示更加宽松美观
+      $("<style>.layui-rate{min-width:180px !important;}.layui-rate-text{white-space:nowrap;}.layui-table-cell{height:auto !important;white-space:normal !important;padding: 10px !important;line-height:24px;overflow:visible !important;} .layui-table{margin-top:15px !important;} .layui-table th{font-weight:bold !important;}</style>").appendTo("head");
+  });
+
+  function notNumber(val) {
+    var regPos = /^\d+(\.\d+)?$/; //非负浮点数
+    var regNeg = /^(-(([0-9]+\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\.[0-9]+)|([0-9]*[1-9][0-9]*)))$/; //负浮点数
+    if(regPos.test(val) || regNeg.test(val)) {
+        return false;
+        } else {
+        return true;
+        }
+    }
+  </script>
+{% endblock %}

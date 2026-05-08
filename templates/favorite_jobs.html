@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+  <div class="layui-fluid">
+    <div class="layui-card">
+      <div class="layui-card-header">我的收藏</div>
+
+      <div class="layui-card-body">
+          <table id="LAY-favorite-jobs-list" lay-filter="LAY-favorite-jobs-list"></table>
+          {% verbatim %}
+            <script type="text/html" id="table-favorite-jobs-list">
+              <a class="layui-btn layui-btn-sm layui-btn-danger" lay-event="unfavorite"><i class="layui-icon layui-icon-delete"></i>取消收藏</a>
+              {{#  if(d.send_key == 0){ }}
+              <a class="layui-btn layui-btn-sm layui-btn-normal" lay-event="send"><i class="layui-icon layui-icon-add-circle-fine"></i>投递</a>
+              {{#  } else { }}
+              <a class="layui-btn layui-btn-sm layui-btn-disabled">已投递</a>
+              {{#  } }}
+            </script>
+            
+            <!-- 评分模板 -->
+            <script type="text/html" id="ratingTpl">
+              <div class="layui-inline">
+                <div class="layui-rate" id="rating-{{d.job_id}}" data-value="{{d.rating}}"></div>
+              </div>
+            </script>
+          {% endverbatim %}
+      </div>
+    </div>
+  </div>
+  </body>
+{% endblock %}
+
+{% block js %}
+  <script>
+  layui.config({
+    base: '{% static "layuiadmin/" %}' // 静态资源所在路径
+  }).extend({
+    index: 'lib/index' //主入口模块
+  }).use(['index', 'table', 'rate'], function() {
+      var $ = layui.$,
+          form = layui.form,
+          table = layui.table,
+          rate = layui.rate;
+
+      // 渲染表格
+      table.render({
+        elem: '#LAY-favorite-jobs-list',
+        url: '/get_favorite_jobs/',
+        cellMinWidth: 100, // 单元格最小宽度
+        cols: [[
+          {field: 'job_id', width: 80, title: 'ID', sort: true},
+          {field: 'name', minWidth: 180, title: '职位名称'},
+          {field: 'salary', width: 100, title: '薪资'},
+          {field: 'place', width: 120, title: '工作地点'},
+          {field: 'education', width: 100, title: '学历要求'},
+          {field: 'company', minWidth: 150, title: '公司名称'},
+          {field: 'rating', width: 220, title: '评分', templet: '#ratingTpl', align: 'center'},
+          {title: '操作', width: 210, align: 'center', toolbar: '#table-favorite-jobs-list'}
+        ]],
+        page: true,
+        limit: 10,
+        done: function(res, curr, count) {
+          // 渲染评分组件
+          layui.each(res.data, function(index, item) {
+            rate.render({
+              elem: '#rating-' + item.job_id,
+              value: item.rating || 0,
+              text: true,
+              half: false,
+              readonly: false,
+              theme: '#FFB800',  // 主题色
+              length: 5,         // 星星个数
+              choose: function(value) {
+                // 评分选择后提交
+                $.ajax({
+                  type: 'POST',
+                  url: '/job_rate/',
+                  data: {
+                    job_id: item.job_id,
+                    rating: value
+                  },
+                  success: function(res) {
+                    if(res.code === 0) {
+                      layer.msg(res.msg);
+                    } else {
+                      layer.msg(res.msg);
+                    }
+                  }
+                });
+              }
+            });
+          });
+          
+          // 添加全局样式以确保表格显示更加宽松美观
+          $("<style>.layui-rate{min-width:150px !important;}.layui-table-cell{height:auto !important;white-space:normal !important;padding: 10px !important;line-height:24px;} .layui-table{margin-top:15px !important;} .layui-table th{font-weight:bold !important;}</style>").appendTo("head");
+        },
+        skin: 'line', // 表格风格
+        even: true,   // 隔行背景
+        size: 'lg'    // 大尺寸表格
+      });
+
+      // 监听工具条
+      table.on('tool(LAY-favorite-jobs-list)', function(obj) {
+        var data = obj.data;
+        if(obj.event === 'unfavorite') {
+          // 取消收藏
+          layer.confirm('确定取消收藏该职位?', function(index) {
+            $.ajax({
+              type: 'POST',
+              url: '/toggle_favorite/',
+              data: {
+                job_id: data.job_id
+              },
+              success: function(res) {
+                if(res.code === 0) {
+                  layer.msg(res.msg);
+                  // 重载表格
+                  table.reload('LAY-favorite-jobs-list');
+                } else {
+                  layer.msg(res.msg);
+                }
+              }
+            });
+            layer.close(index);
+          });
+        } else if(obj.event === 'send') {
+          // 投递职位
+          layer.confirm('确定投递该职位?', function(index) {
+            $.ajax({
+              type: 'POST',
+              url: '/send_job/',
+              data: {
+                job_id: data.job_id,
+                send_key: 0
+              },
+              success: function(res) {
+                if(res.Code === 0) {
+                  layer.msg(res.msg);
+                  // 重载表格
+                  table.reload('LAY-favorite-jobs-list');
+                } else {
+                  layer.msg(res.msg);
+                }
+              }
+            });
+            layer.close(index);
+          });
+        }
+      });
+  });
+
+  function openJobDetail(jobId) {
+    // 打开职位详情窗口
+    layer.open({
+      type: 2,
+      title: '职位详情',
+      shade: 0.6,
+      area: ['800px', '600px'],
+      content: '/job_detail/?job_id=' + jobId
+    });
+  }
+  </script>
+{% endblock %} 

@@ -1,0 +1,1117 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <!-- 初始化错误或消息提示 -->
+            {% if init_error %}
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header" style="background-color: #FF5722; color: white;">
+                        <i class="layui-icon layui-icon-face-cry"></i> 初始化错误
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="layui-bg-red" style="padding: 10px; border-radius: 4px;">
+                            {{ init_error }}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <p>您可以尝试以下解决方法：</p>
+                            <ol>
+                                <li>确保已应用所有数据库迁移</li>
+                                <li>检查数据库连接是否正常</li>
+                                <li>查看日志获取更多信息</li>
+                                <li>重新加载页面，系统将尝试自动修复</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if init_message %}
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header" style="background-color: #009688; color: white;">
+                        <i class="layui-icon layui-icon-ok-circle"></i> 系统提示
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="layui-bg-green" style="padding: 10px; border-radius: 4px;">
+                            {{ init_message }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 薪资预测卡片 -->
+            <div class="layui-col-md7">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2><i class="layui-icon layui-icon-chart"></i> 薪资预测</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" id="predictionForm">
+                            <div class="layui-row layui-col-space15">
+                                <div class="layui-col-md6">
+                                    <!-- 职位名称 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">职位名称</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="position_name" required lay-verify="required" placeholder="请输入职位名称" class="layui-input">
+                                            <div class="form-tips">例如：Java开发工程师、Python数据分析师、UI设计师等</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 学历要求 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">学历要求</label>
+                                        <div class="layui-input-block">
+                                            <select name="education" lay-verify="required">
+                                                {% for education in education_options %}
+                                                <option value="{{ education }}" {% if education == '本科' %}selected{% endif %}>{{ education }}</option>
+                                                {% empty %}
+                                                <option value="博士">博士</option>
+                                                <option value="硕士">硕士</option>
+                                                <option value="本科" selected>本科</option>
+                                                <option value="大专">大专</option>
+                                                <option value="中专">中专</option>
+                                                <option value="中专以下">中专以下</option>
+                                                <option value="不限">不限</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 工作经验 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">工作经验</label>
+                                        <div class="layui-input-block">
+                                            <select name="experience" lay-verify="required">
+                                                {% for experience in experience_options %}
+                                                <option value="{{ experience }}" {% if experience == '3-5年' %}selected{% endif %}>{{ experience }}</option>
+                                                {% empty %}
+                                                <option value="实习">实习</option>
+                                                <option value="应届生">应届生</option>
+                                                <option value="1年以下">1年以下</option>
+                                                <option value="1-3年">1-3年</option>
+                                                <option value="3-5年" selected>3-5年</option>
+                                                <option value="5-10年">5-10年</option>
+                                                <option value="10年以上">10年以上</option>
+                                                <option value="不限">不限</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="layui-col-md6">
+                                    <!-- 工作城市 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">工作城市</label>
+                                        <div class="layui-input-block">
+                                            <select name="city" lay-verify="required">
+                                                {% for city in city_options %}
+                                                <option value="{{ city }}" {% if city == '北京' %}selected{% endif %}>{{ city }}</option>
+                                                {% empty %}
+                                                <option value="北京" selected>北京</option>
+                                                <option value="上海">上海</option>
+                                                <option value="广州">广州</option>
+                                                <option value="深圳">深圳</option>
+                                                <option value="杭州">杭州</option>
+                                                <option value="成都">成都</option>
+                                                <option value="武汉">武汉</option>
+                                                <option value="南京">南京</option>
+                                                <option value="西安">西安</option>
+                                                <option value="其他">其他</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 公司规模 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">公司规模</label>
+                                        <div class="layui-input-block">
+                                            <select name="company_scale" lay-verify="required">
+                                                {% for scale in scale_options %}
+                                                <option value="{{ scale }}" {% if scale == '小型企业' %}selected{% endif %}>{{ scale }}</option>
+                                                {% empty %}
+                                                <option value="小型企业" selected>小型企业</option>
+                                                <option value="中小企业">中小企业</option>
+                                                <option value="中型企业">中型企业</option>
+                                                <option value="中大型企业">中大型企业</option>
+                                                <option value="大型企业">大型企业</option>
+                                                <option value="超大型企业">超大型企业</option>
+                                                <option value="未知规模">未知规模</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 技能要求 -->
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">技能要求</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="skills" placeholder="请输入技能要求，多个技能用逗号分隔" class="layui-input">
+                                            <div class="form-tips">例如：Java,Spring,MySQL 或 Python,数据分析,机器学习</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 模型选择 -->
+                                <div class="layui-col-md12">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">预测模型</label>
+                                        <div class="layui-input-block">
+                                            <select name="model_type" lay-filter="model_type">
+                                                <option value="random_forest" selected>随机森林</option>
+                                                <option value="gradient_boosting">梯度提升树</option>
+                                                <option value="linear">线性回归</option>
+                                                <option value="ridge">岭回归</option>
+                                                <option value="lasso">Lasso回归</option>
+                                            </select>
+                                            <div class="model-explanation" id="modelExplanation">
+                                                <p><strong>随机森林</strong>：集成学习算法，对职位薪资影响因素有较好的识别能力，默认推荐</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 提交按钮 -->
+                            <div class="layui-form-item center-buttons">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="predictSalary">
+                                        <i class="layui-icon layui-icon-chart-screen"></i> 开始预测
+                                    </button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">
+                                        <i class="layui-icon layui-icon-refresh"></i> 重置
+                                    </button>
+                                    <button type="button" class="layui-btn layui-btn-warm" id="trainNewModel">
+                                        <i class="layui-icon layui-icon-engine"></i> 选择或训练模型
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- 预测结果展示区 -->
+                        <div class="prediction-result" id="predictionResult">
+                            <div class="layui-row layui-col-space15">
+                                <div class="layui-col-md12">
+                                    <div class="result-card">
+                                        <div class="result-header">
+                                            <h3>预测结果</h3>
+                                            <div class="result-job">您预测的职位：<span id="resultPositionName"></span></div>
+                                        </div>
+                                        <div class="result-body">
+                                            <div class="salary-range">薪资范围：<span id="resultSalaryRange"></span></div>
+                                            <div class="result-details">
+                                                <div class="detail-item">
+                                                    <span class="detail-label">学历要求：</span>
+                                                    <span class="detail-value" id="resultEducation"></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">工作经验：</span>
+                                                    <span class="detail-value" id="resultExperience"></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">工作城市：</span>
+                                                    <span class="detail-value" id="resultCity"></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">公司规模：</span>
+                                                    <span class="detail-value" id="resultCompanyScale"></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">技能要求：</span>
+                                                    <span class="detail-value" id="resultSkills"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="layui-col-md5">
+                <!-- 模型信息卡片 -->
+                <div class="layui-card model-card">
+                    <div class="layui-card-header">
+                        <h2><i class="layui-icon layui-icon-console"></i> 预测模型信息</h2>
+                    </div>
+                    <div class="layui-card-body model-info-body">
+                        <div class="model-info" id="modelInfo">
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-template-1"></i>
+                                <span class="info-label">模型名称：</span>
+                                <span class="info-value" id="modelName">-</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-component"></i>
+                                <span class="info-label">模型类型：</span>
+                                <span class="info-value" id="modelType">-</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-chart"></i>
+                                <span class="info-label">R2得分：</span>
+                                <span class="info-value" id="r2Score">-</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-subtraction"></i>
+                                <span class="info-label">平均绝对误差：</span>
+                                <span class="info-value" id="meanAbsoluteError">-</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-time"></i>
+                                <span class="info-label">创建时间：</span>
+                                <span class="info-value" id="createdTime">-</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="layui-icon layui-icon-refresh"></i>
+                                <span class="info-label">更新时间：</span>
+                                <span class="info-value" id="updatedTime">-</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 特征重要性图表 -->
+                        <div class="feature-chart" id="featureImportanceChart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 新增一行用于预测历史记录和已训练模型列表 -->
+        <div class="layui-row layui-col-space15">
+            <!-- 预测历史记录卡片 -->
+            <div class="layui-col-md6">
+                <div class="layui-card history-card">
+                    <div class="layui-card-header">
+                        <h2><i class="layui-icon layui-icon-log"></i> 预测历史记录</h2>
+                    </div>
+                    <div class="layui-card-body history-card-body">
+                        <table id="predictionHistory" lay-filter="predictionHistory"></table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 已训练模型列表卡片 -->
+            <div class="layui-col-md6">
+                <div id="availableModelsList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .layui-card {
+            margin-bottom: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        .layui-card-header {
+            font-weight: bold;
+            color: #333;
+            height: auto;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f6f6f6;
+        }
+        .layui-card-header h2 {
+            font-size: 16px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .layui-card-header h2 i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        .layui-card-body {
+            padding: 20px;
+        }
+        
+        /* 调整卡片高度 */
+        .layui-col-md7 .layui-card .layui-card-body {
+            min-height: 650px; /* 与模型信息卡片保持一致的高度 */
+        }
+        .model-card .layui-card-body {
+            height: 650px; /* 增加高度以匹配薪资预测卡片 */
+            overflow-y: auto;
+        }
+        .history-card-body {
+            height: 300px;
+            overflow-y: auto;
+        }
+        .model-list-card .layui-card-body {
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .center-buttons {
+            text-align: center;
+            margin-top: 25px;
+        }
+        .center-buttons .layui-input-block {
+            margin-left: 0;
+            text-align: center;
+        }
+        .form-tips {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .model-explanation {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background-color: #f8f8f8;
+            border-left: 3px solid #009688;
+            color: #666;
+            font-size: 13px;
+        }
+        .prediction-result {
+            margin: 20px 0 0 0;
+            display: none;
+        }
+        .result-card {
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            padding: 15px;
+            border-left: 5px solid #009688;
+        }
+        .result-header {
+            border-bottom: 1px dashed #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .result-header h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .result-job {
+            font-size: 16px;
+            color: #555;
+        }
+        .salary-range {
+            font-size: 24px;
+            color: #FF5722;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .result-details {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .detail-item {
+            width: 50%;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .detail-label {
+            color: #666;
+            min-width: 80px;
+        }
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+        .model-info {
+            margin-bottom: 20px;
+        }
+        .info-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .info-item i {
+            margin-right: 8px;
+            color: #009688;
+        }
+        .info-label {
+            color: #666;
+            min-width: 100px;
+        }
+        .info-value {
+            font-weight: bold;
+            color: #333;
+        }
+        .feature-chart {
+            height: 350px; /* 增加图表高度以填充更多空间 */
+            margin-top: 20px;
+        }
+        
+        /* 响应式调整 */
+        @media screen and (max-width: 768px) {
+            .detail-item {
+                width: 100%;
+            }
+            .layui-col-md7 .layui-card .layui-card-body,
+            .model-card .layui-card-body,
+            .history-card-body,
+            .model-list-card .layui-card-body {
+                height: auto;
+                min-height: auto;
+                max-height: 500px;
+            }
+        }
+    </style>
+</body>
+{% endblock content %}
+
+{% block js %}
+<!-- 直接引入ECharts库 -->
+<script src="/static/echarts.min.js"></script>
+<script>
+    layui.use(['form', 'table', 'layer', 'jquery'], function(){
+        var form = layui.form;
+        var table = layui.table;
+        var layer = layui.layer;
+        var $ = layui.jquery;
+        
+        // 初始加载随机森林模型信息
+        loadModelInfo('random_forest');
+        
+        // 加载可用模型列表
+        loadAvailableModels();
+        
+        // 模型类型变更事件
+        form.on('select(model_type)', function(data){
+            var modelType = data.value;
+            
+            // 更新模型说明
+            var modelExplanations = {
+                'random_forest': '<strong>随机森林</strong>：集成学习算法，对职位薪资影响因素有较好的识别能力，默认推荐',
+                'gradient_boosting': '<strong>梯度提升树</strong>：对特征间关系建模更精确，对异常值敏感，可能有更高精度',
+                'linear': '<strong>线性回归</strong>：最基础的回归模型，假设特征与薪资成线性关系，模型简单直观',
+                'ridge': '<strong>岭回归</strong>：带正则化的线性回归，可以减少过拟合，适合特征相关性高的情况',
+                'lasso': '<strong>Lasso回归</strong>：可以进行特征选择的线性回归，会使部分特征权重变为0'
+            };
+            
+            $('#modelExplanation').html('<p>' + modelExplanations[modelType] + '</p>');
+            
+            // 加载选中类型的模型信息
+            loadModelInfo(modelType);
+        });
+        
+        // 初始化预测历史记录表格
+        table.render({
+            elem: '#predictionHistory',
+            url: '/get_prediction_history/',
+            page: true,
+            limit: 10,
+            cols: [[
+                {field: 'position_name', title: '职位名称', width: 150},
+                {field: 'predicted_salary_min', title: '最低薪资(K)', width: 100},
+                {field: 'predicted_salary_max', title: '最高薪资(K)', width: 100},
+                {field: 'city', title: '城市', width: 80},
+                {field: 'education', title: '学历', width: 80},
+                {field: 'prediction_date', title: '预测时间', width: 160}
+            ]],
+            response: {
+                statusCode: 0
+            },
+            parseData: function(res){
+                return {
+                    "code": res.code,
+                    "msg": res.msg,
+                    "count": res.count,
+                    "data": res.data
+                };
+            }
+        });
+        
+        // 表单提交事件
+        form.on('submit(predictSalary)', function(data){
+            // 显示加载层
+            var loadIndex = layer.load(1, {shade: [0.3, '#000']});
+            
+            // 发送预测请求
+            $.ajax({
+                url: '/predict_salary/',
+                type: 'POST',
+                data: data.field,
+                success: function(res){
+                    // 关闭加载层
+                    layer.close(loadIndex);
+                    
+                    if(res.code === 0){
+                        // 薪资格式化：保留一位小数
+                        var minSalary = parseFloat(res.data.min_salary).toFixed(1);
+                        var maxSalary = parseFloat(res.data.max_salary).toFixed(1);
+                        
+                        // 更新预测结果
+                        $('#resultPositionName').text(res.data.position_name);
+                        $('#resultSalaryRange').text(minSalary + 'K - ' + maxSalary + 'K');
+                        $('#resultEducation').text(res.data.education);
+                        $('#resultExperience').text(res.data.experience);
+                        $('#resultCity').text(res.data.city);
+                        $('#resultCompanyScale').text(res.data.company_scale);
+                        $('#resultSkills').text(res.data.skills || '无');
+                        
+                        // 显示预测结果
+                        $('#predictionResult').show();
+                        
+                        // 平滑滚动到结果区域
+                        $('html, body').animate({
+                            scrollTop: $('#predictionResult').offset().top - 100
+                        }, 500);
+                        
+                        // 刷新历史记录表格
+                        table.reload('predictionHistory');
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                },
+                error: function(){
+                    layer.close(loadIndex);
+                    layer.msg('网络错误，请稍后重试', {icon: 2});
+                }
+            });
+            
+            return false; // 阻止表单默认提交
+        });
+        
+        // 训练新模型按钮事件
+        $('#trainNewModel').on('click', function(){
+            var modelType = $('select[name="model_type"]').val();
+            
+            // 不同模型类型的默认参数
+            var defaultParams = {
+                'random_forest': {
+                    'n_estimators': 100,
+                    'max_depth': 10,
+                    'min_samples_split': 5,
+                    'min_samples_leaf': 2
+                },
+                'gradient_boosting': {
+                    'n_estimators': 100,
+                    'learning_rate': 0.1,
+                    'max_depth': 3
+                },
+                'linear': {},
+                'ridge': {
+                    'alpha': 1.0
+                },
+                'lasso': {
+                    'alpha': 0.1
+                }
+            };
+            
+            // 获取当前选中模型类型的默认参数
+            var currentParams = defaultParams[modelType] || {};
+            
+            // 根据模型类型创建参数表单
+            var paramFormContent = '';
+            
+            if (modelType === 'random_forest') {
+                paramFormContent = `
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">决策树数量</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="n_estimators" value="${currentParams.n_estimators}" class="layui-input" min="10" max="1000">
+                            <div class="form-tips">决策树的数量，一般较大的值会带来更好的性能，但也会增加训练时间</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">最大深度</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="max_depth" value="${currentParams.max_depth}" class="layui-input" min="1" max="50">
+                            <div class="form-tips">树的最大深度，控制模型复杂度</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">最小分裂样本数</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="min_samples_split" value="${currentParams.min_samples_split}" class="layui-input" min="2" max="20">
+                            <div class="form-tips">分裂内部节点所需的最小样本数</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">最小叶子样本数</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="min_samples_leaf" value="${currentParams.min_samples_leaf}" class="layui-input" min="1" max="20">
+                            <div class="form-tips">叶子节点所需的最小样本数</div>
+                        </div>
+                    </div>
+                `;
+            } else if (modelType === 'gradient_boosting') {
+                paramFormContent = `
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">决策树数量</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="n_estimators" value="${currentParams.n_estimators}" class="layui-input" min="10" max="1000">
+                            <div class="form-tips">弱学习器（决策树）的数量</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">学习率</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="learning_rate" value="${currentParams.learning_rate}" class="layui-input" min="0.01" max="1" step="0.01">
+                            <div class="form-tips">每个弱学习器的贡献权重，较小的值需要更多的弱学习器</div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">最大深度</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="max_depth" value="${currentParams.max_depth}" class="layui-input" min="1" max="10">
+                            <div class="form-tips">树的最大深度，控制模型复杂度</div>
+                        </div>
+                    </div>
+                `;
+            } else if (modelType === 'ridge') {
+                paramFormContent = `
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">正则化强度</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="alpha" value="${currentParams.alpha}" class="layui-input" min="0.01" max="10" step="0.01">
+                            <div class="form-tips">正则化强度，较大的值表示更强的正则化</div>
+                        </div>
+                    </div>
+                `;
+            } else if (modelType === 'lasso') {
+                paramFormContent = `
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">正则化强度</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="alpha" value="${currentParams.alpha}" class="layui-input" min="0.01" max="10" step="0.01">
+                            <div class="form-tips">正则化强度，较大的值会使更多的特征权重变为0</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 线性回归没有额外参数
+                paramFormContent = `
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <p>线性回归模型没有额外的训练参数需要设置。</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 创建参数设置表单的弹出层
+            layer.open({
+                type: 1,
+                title: '设置' + getModelTypeName(modelType) + '模型训练参数',
+                area: ['500px', 'auto'],
+                content: `
+                    <div class="layui-form" style="padding: 20px;" id="modelParamsForm">
+                        ${paramFormContent}
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" id="startTraining">开始训练</button>
+                                <button class="layui-btn layui-btn-primary" id="resetParams">重置参数</button>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                success: function(layero, index){
+                    // 渲染表单
+                    form.render();
+                    
+                    // 开始训练按钮事件
+                    $('#startTraining').on('click', function(){
+                        // 收集参数
+                        var params = {
+                            model_type: modelType
+                        };
+                        
+                        // 根据模型类型获取参数
+                        if (modelType === 'random_forest') {
+                            params.n_estimators = $('input[name="n_estimators"]').val();
+                            params.max_depth = $('input[name="max_depth"]').val();
+                            params.min_samples_split = $('input[name="min_samples_split"]').val();
+                            params.min_samples_leaf = $('input[name="min_samples_leaf"]').val();
+                        } else if (modelType === 'gradient_boosting') {
+                            params.n_estimators = $('input[name="n_estimators"]').val();
+                            params.learning_rate = $('input[name="learning_rate"]').val();
+                            params.max_depth = $('input[name="max_depth"]').val();
+                        } else if (modelType === 'ridge' || modelType === 'lasso') {
+                            params.alpha = $('input[name="alpha"]').val();
+                        }
+                        
+                        // 关闭弹出层
+                        layer.close(index);
+                        
+                        // 显示加载层
+                        var loadIndex = layer.load(1, {shade: [0.3, '#000']});
+                        
+                        // 发送训练请求
+                        $.ajax({
+                            url: '/train_salary_model/',
+                            type: 'POST',
+                            data: params,
+                            success: function(res){
+                                layer.close(loadIndex);
+                                
+                                if(res.code === 0){
+                                    layer.msg('模型训练成功！', {icon: 1});
+                                    
+                                    // 刷新模型信息
+                                    loadModelInfo(modelType);
+                                    
+                                    // 刷新可用模型列表
+                                    loadAvailableModels();
+                                } else {
+                                    layer.msg(res.msg, {icon: 2});
+                                }
+                            },
+                            error: function(){
+                                layer.close(loadIndex);
+                                layer.msg('网络错误，请稍后重试', {icon: 2});
+                            }
+                        });
+                    });
+                    
+                    // 重置参数按钮事件
+                    $('#resetParams').on('click', function(){
+                        // 重置为默认参数
+                        if (modelType === 'random_forest') {
+                            $('input[name="n_estimators"]').val(defaultParams.random_forest.n_estimators);
+                            $('input[name="max_depth"]').val(defaultParams.random_forest.max_depth);
+                            $('input[name="min_samples_split"]').val(defaultParams.random_forest.min_samples_split);
+                            $('input[name="min_samples_leaf"]').val(defaultParams.random_forest.min_samples_leaf);
+                        } else if (modelType === 'gradient_boosting') {
+                            $('input[name="n_estimators"]').val(defaultParams.gradient_boosting.n_estimators);
+                            $('input[name="learning_rate"]').val(defaultParams.gradient_boosting.learning_rate);
+                            $('input[name="max_depth"]').val(defaultParams.gradient_boosting.max_depth);
+                        } else if (modelType === 'ridge') {
+                            $('input[name="alpha"]').val(defaultParams.ridge.alpha);
+                        } else if (modelType === 'lasso') {
+                            $('input[name="alpha"]').val(defaultParams.lasso.alpha);
+                        }
+                    });
+                }
+            });
+            
+            return false; // 阻止表单默认提交
+        });
+        
+        // 加载模型信息
+        function loadModelInfo(modelType){
+            var url = '/get_model_info/';
+            if(modelType){
+                url += '?model_type=' + modelType;
+            }
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(res){
+                    if(res.code === 0){
+                        // 更新模型信息
+                        $('#modelName').text(res.data.model_name);
+                        $('#modelType').text(getModelTypeName(res.data.model_type));
+                        $('#r2Score').text(res.data.r2_score);
+                        $('#meanAbsoluteError').text(res.data.mean_absolute_error);
+                        $('#createdTime').text(res.data.created_time);
+                        $('#updatedTime').text(res.data.updated_time);
+                        
+                        // 如果有特征重要性数据，绘制图表
+                        if(res.data.feature_importance){
+                            renderFeatureChart(res.data.feature_importance);
+                        }
+                    } else {
+                        if(modelType){
+                            // 如果是特定模型类型不存在
+                            $('#modelName').text('-');
+                            $('#modelType').text(getModelTypeName(modelType) + ' (未训练)');
+                            $('#r2Score').text('-');
+                            $('#meanAbsoluteError').text('-');
+                            $('#createdTime').text('-');
+                            $('#updatedTime').text('-');
+                            
+                            // 清空特征重要性图表
+                            var chartDom = document.getElementById('featureImportanceChart');
+                            if(chartDom){
+                                var myChart = echarts.init(chartDom);
+                                myChart.clear();
+                            }
+                            
+                            // 显示友好提示
+                            showModelTrainingTip(modelType);
+                        } else {
+                            // 显示通用错误提示
+                            showGeneralErrorTip(res.msg);
+                        }
+                    }
+                },
+                error: function(xhr, status, error){
+                    // 显示通用错误提示
+                    showGeneralErrorTip('获取模型信息失败: ' + error);
+                }
+            });
+        }
+        
+        // 显示模型训练提示
+        function showModelTrainingTip(modelType) {
+            var typeName = getModelTypeName(modelType);
+            layer.confirm('系统中尚未训练' + typeName + '模型，是否现在训练？', {
+                btn: ['立即训练', '取消'],
+                title: '模型训练提示'
+            }, function(index){
+                layer.close(index);
+                
+                // 显示加载层
+                var loadIndex = layer.load(1, {shade: [0.3, '#000']});
+                
+                // 发送训练请求
+                $.ajax({
+                    url: '/train_salary_model/',
+                    type: 'POST',
+                    data: {
+                        model_type: modelType
+                    },
+                    success: function(res){
+                        layer.close(loadIndex);
+                        
+                        if(res.code === 0){
+                            layer.msg('模型训练成功！', {icon: 1});
+                            
+                            // 刷新模型信息
+                            loadModelInfo(modelType);
+                            
+                            // 刷新可用模型列表
+                            loadAvailableModels();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                    },
+                    error: function(){
+                        layer.close(loadIndex);
+                        layer.msg('网络错误，请稍后重试', {icon: 2});
+                    }
+                });
+            });
+        }
+        
+        // 显示通用错误提示
+        function showGeneralErrorTip(message) {
+            layer.msg(message, {
+                icon: 2,
+                time: 5000  // 显示5秒
+            });
+        }
+        
+        // 加载可用模型列表
+        function loadAvailableModels(){
+            $.ajax({
+                url: '/get_available_models/',
+                type: 'GET',
+                success: function(res){
+                    if(res.code === 0){
+                        // 在页面中添加可用模型列表
+                        var modelsList = '';
+                        
+                        if(res.data.length > 0){
+                            modelsList = '<div class="layui-card model-list-card">' +
+                                         '<div class="layui-card-header"><h2><i class="layui-icon layui-icon-template"></i> 已训练模型列表</h2></div>' +
+                                         '<div class="layui-card-body">' +
+                                         '<table class="layui-table" lay-skin="line">' +
+                                         '<thead><tr><th>模型类型</th><th>R2得分</th><th>平均误差</th><th>更新时间</th></tr></thead>' +
+                                         '<tbody>';
+                            
+                            res.data.forEach(function(model){
+                                modelsList += '<tr>' +
+                                             '<td>' + getModelTypeName(model.model_type) + '</td>' +
+                                             '<td>' + model.r2_score + '</td>' +
+                                             '<td>' + model.mean_absolute_error + '</td>' +
+                                             '<td>' + model.updated_time + '</td>' +
+                                             '</tr>';
+                            });
+                            
+                            modelsList += '</tbody></table></div></div>';
+                            
+                            // 添加到页面中
+                            var existingList = $('#availableModelsList');
+                            if(existingList.length > 0){
+                                existingList.html(modelsList);
+                            } else {
+                                $('.layui-col-md6:last').append('<div id="availableModelsList">' + modelsList + '</div>');
+                            }
+                        } else {
+                            // 如果没有模型，显示空列表
+                            modelsList = '<div class="layui-card model-list-card">' +
+                                     '<div class="layui-card-header"><h2><i class="layui-icon layui-icon-template"></i> 已训练模型列表</h2></div>' +
+                                     '<div class="layui-card-body">' +
+                                     '<div class="layui-bg-gray" style="padding: 10px; text-align: center;">暂无已训练的模型，请点击"选择或训练模型"按钮训练模型</div>' +
+                                     '</div></div>';
+                            
+                            // 添加到页面中
+                            var existingList = $('#availableModelsList');
+                            if(existingList.length > 0){
+                                existingList.html(modelsList);
+                            } else {
+                                $('.layui-col-md6:last').append(modelsList);
+                            }
+                        }
+                    } else {
+                        // 显示错误信息
+                        var errorMsg = '<div class="layui-card model-list-card">' +
+                                   '<div class="layui-card-header"><h2><i class="layui-icon layui-icon-template"></i> 已训练模型列表</h2></div>' +
+                                   '<div class="layui-card-body">' +
+                                   '<div class="layui-bg-red" style="padding: 10px;">' + res.msg + '</div>' +
+                                   '</div></div>';
+                        
+                        // 添加到页面中
+                        var existingList = $('#availableModelsList');
+                        if(existingList.length > 0){
+                            existingList.html(errorMsg);
+                        } else {
+                            $('.layui-col-md6:last').append(errorMsg);
+                        }
+                    }
+                },
+                error: function(xhr, status, error){
+                    // 显示错误信息
+                    var errorMsg = '<div class="layui-card model-list-card">' +
+                               '<div class="layui-card-header"><h2><i class="layui-icon layui-icon-template"></i> 已训练模型列表</h2></div>' +
+                               '<div class="layui-card-body">' +
+                               '<div class="layui-bg-red" style="padding: 10px;">获取模型列表失败: ' + error + '</div>' +
+                               '</div></div>';
+                    
+                    // 添加到页面中
+                    var existingList = $('#availableModelsList');
+                    if(existingList.length > 0){
+                        existingList.html(errorMsg);
+                    } else {
+                        $('.layui-col-md6:last').append(errorMsg);
+                    }
+                }
+            });
+        }
+        
+        // 获取模型类型的中文名称
+        function getModelTypeName(modelType) {
+            var modelNames = {
+                'random_forest': '随机森林',
+                'gradient_boosting': '梯度提升树',
+                'linear': '线性回归',
+                'ridge': '岭回归',
+                'lasso': 'Lasso回归'
+            };
+            
+            return modelNames[modelType] || modelType;
+        }
+        
+        // 渲染特征重要性图表
+        function renderFeatureChart(featureImportance){
+            var chartDom = document.getElementById('featureImportanceChart');
+            var myChart = echarts.init(chartDom);
+            
+            // 准备数据
+            var features = [];
+            var importance = [];
+            
+            // 按重要性降序排序
+            var sortedFeatures = Object.entries(featureImportance).sort((a, b) => b[1] - a[1]);
+            
+            // 只取前15个特征
+            var topFeatures = sortedFeatures.slice(0, 15);
+            
+            // 解析特征名称，移除分类特征前缀
+            topFeatures.forEach(function(item){
+                var featureName = item[0];
+                // 如果特征名称包含分类特征前缀，则提取实际的特征值
+                if(featureName.includes('_')){
+                    var parts = featureName.split('_');
+                    featureName = parts.slice(1).join('_');
+                }
+                features.push(featureName);
+                importance.push(item[1]);
+            });
+            
+            // 配置选项
+            var option = {
+                title: {
+                    text: '特征重要性',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 16,
+                        fontWeight: 'normal'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    },
+                    formatter: function(params) {
+                        var feature = params[0].name;
+                        var value = params[0].value.toFixed(4);
+                        return feature + '<br>重要性: ' + value;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    name: '重要性',
+                    nameLocation: 'center',
+                    nameGap: 30,
+                    nameTextStyle: {
+                        fontWeight: 'bold'
+                    }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: features.reverse(),
+                    name: '特征',
+                    nameLocation: 'end',
+                    nameGap: 15,
+                    nameTextStyle: {
+                        fontWeight: 'bold'
+                    },
+                    axisLabel: {
+                        interval: 0,
+                        formatter: function(value) {
+                            if(value.length > 10) {
+                                return value.substring(0, 10) + '...';
+                            }
+                            return value;
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: '重要性',
+                        type: 'bar',
+                        data: importance.reverse(),
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                {offset: 0, color: '#83bff6'},
+                                {offset: 0.5, color: '#188df0'},
+                                {offset: 1, color: '#009688'}
+                            ])
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    {offset: 0, color: '#2378f7'},
+                                    {offset: 0.7, color: '#2378f7'},
+                                    {offset: 1, color: '#83bff6'}
+                                ])
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            // 渲染图表
+            myChart.setOption(option);
+            
+            // 窗口大小变化时自动调整图表大小
+            window.addEventListener('resize', function(){
+                myChart.resize();
+            });
+        }
+    });
+</script>
+{% endblock js %} 

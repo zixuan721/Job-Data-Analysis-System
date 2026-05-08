@@ -1,0 +1,36 @@
+{
+    "model_type": "lasso",
+    "model_filename": "lasso_1767881619.pkl",
+    "created_time": "2026-01-08 22:13:39",
+    "categorical_features": [
+        "education",
+        "experience",
+        "place",
+        "scale",
+        "key_word",
+        "position_level",
+        "position_popularity_bin",
+        "city_popularity_bin"
+    ],
+    "numerical_features": [
+        "salary_ratio",
+        "position_popularity",
+        "city_popularity"
+    ],
+    "results": {
+        "model_type": "lasso",
+        "min_salary": {
+            "mae": 0.501635760558992,
+            "r2": -0.4739569875520968,
+            "mae_orig": 8.46186457573299,
+            "r2_orig": -0.22398948152890208
+        },
+        "max_salary": {
+            "mae": 0.41970218039144536,
+            "r2": -0.0004993280022531632,
+            "mae_orig": 9.952656706691595,
+            "r2_orig": -0.06356652388549966
+        },
+        "feature_importance": {}
+    }
+}

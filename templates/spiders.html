@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    <body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">爬虫设置</div>
+                    <div class="layui-card-body">
+                        <div class="layui-form" lay-filter="">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">关键字</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="key_word" class="layui-input"
+                                           placeholder="输入需要爬取的职位信息如：java工程师">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">城市搜索</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="city" id="city-input" class="layui-input" placeholder="输入城市名称，支持模糊搜索">
+                                    <div id="city-search-results" class="city-search-dropdown"></div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">热门城市</label>
+                                <div class="layui-input-block" id="hot-cities">
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="全国">全国</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="北京">北京</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="上海">上海</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="广州">广州</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="深圳">深圳</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="杭州">杭州</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="成都">成都</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="武汉">武汉</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="西安">西安</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="南京">南京</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="天津">天津</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="重庆">重庆</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="苏州">苏州</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="广西">广西</span>
+                                    <span class="layui-badge layui-bg-blue city-tag" data-city="江西">江西</span>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">网站选择</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="role" value="猎聘网" title="猎聘网" checked>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">页数选择</label>
+                                <div class="layui-input-block">
+                                    <select name="page" lay-verify="">
+                                        <option value="">请选择需要爬取页数数量</option>
+                                        <option value="1">1页</option>
+                                        <option value="2">2页</option>
+                                        <option value="3">3页</option>
+                                        <option value="4">4页</option>
+                                        <option value="5">5页</option>
+                                        <option value="6">6页</option>
+                                        <option value="7">7页</option>
+                                        <option value="8">8页</option>
+                                        <option value="9">9页</option>
+                                        <option value="10">10页</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    {% if spider_code_1 == 0 %}
+                                        <button class="layui-btn" lay-submit lay-filter="start_spider"
+                                                id="start_spider">开始爬取
+                                        </button>
+                                    {% else %}
+                                        <span class="layui-btn">正在爬取,请稍后...</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </body>
+{% endblock %}
+
+{% block js %}
+    <script>
+        layui.config({
+            base: '{% static "layuiadmin/" %}' //静态资源所在路径
+        }).extend({
+            index: 'lib/index' //主入口模块
+        }).use(['index', 'form'], function () {
+            var $ = layui.$,
+                layer = layui.layer
+                , form = layui.form;
+            
+            // 城市数据变量
+            var cityData = [];
+            var cityDataLoaded = false;
+            
+            // 拼音首字母简易映射表（只做常见城市首字母，实际可扩展）
+            var cityPinyinMap = {};
+            
+            // 加载城市数据后，生成拼音首字母索引
+            function buildPinyinIndex() {
+                cityPinyinMap = {};
+                cityData.forEach(function(city) {
+                    var name = city[0];
+                    var code = city[1];
+                    // 这里只做常见城市的首字母，实际可用第三方库如 pinyin.js 生成
+                    var pinyin = '';
+                    if (name.length > 0) {
+                        // 只取每个汉字的首字母，简单处理
+                        for (var i = 0; i < name.length; i++) {
+                            var ch = name[i];
+                            // 这里只处理常见汉字，实际可用更完善的库
+                            pinyin += getFirstPinyinLetter(ch);
+                        }
+                        cityPinyinMap[name] = pinyin.toLowerCase();
+                    }
+                });
+            }
+            
+            // 汉字转拼音首字母（简化版）
+            function getFirstPinyinLetter(ch) {
+                // 这里只处理部分常见汉字，实际建议用第三方库
+                var map = {
+                    '北': 'b', '上': 's', '广': 'g', '深': 's', '杭': 'h', '成': 'c', '武': 'w', '西': 'x', '南': 'n', '天': 't', '重': 'c', '苏': 's',
+                    '江': 'j', '浙': 'z', '安': 'a', '福': 'f', '山': 's', '河': 'h', '湖': 'h', '海': 'h', '云': 'y', '贵': 'g', '陕': 's', '甘': 'g',
+                    '青': 'q', '宁': 'n', '新': 'x', '辽': 'l', '吉': 'j', '黑': 'h', '桂': 'g', '渝': 'y', '赣': 'g', '湘': 'x', '冀': 'j', '鲁': 'l',
+                    '津': 'j', '皖': 'w', '闽': 'm', '粤': 'y', '琼': 'q', '藏': 'z', '蒙': 'm', '港': 'g', '澳': 'a', '台': 't', '昌': 'c', '合': 'h',
+                    '沈': 's', '大': 'd', '哈': 'h', '郑': 'z', '长': 'c', '石': 's', '济': 'j', '太': 't', '呼': 'h', '南': 'n', '贵': 'g', '昆': 'k',
+                    '兰': 'l', '银': 'y', '乌': 'w', '拉': 'l', '西': 'x', '日': 'r', '阿': 'a', '乌': 'w', '伊': 'y', '塔': 't', '克': 'k', '喀': 'k',
+                    '和': 'h', '昌': 'c', '博': 'b', '巴': 'b', '阿': 'a', '图': 't', '五': 'w', '北': 'b', '铁': 't', '双': 's', '可': 'k', '昆': 'k',
+                    '胡': 'h', '新': 'x', '兴': 'x', '锡': 'x', '包': 'b', '赤': 'c', '通': 't', '鄂': 'e', '呼': 'h', '巴': 'b', '乌': 'w', '阿': 'a',
+                    '锡': 'x', '阿': 'a', '呼': 'h', '包': 'b', '赤': 'c', '通': 't', '鄂': 'e', '呼': 'h', '巴': 'b', '乌': 'w', '阿': 'a',
+                };
+                return map[ch] || '';
+            }
+            
+            // 定义补充省份数据的函数
+            function addProvinceData() {
+                // 检查并添加省份数据
+                var provinces = [
+                    ["江西", "200"], ["广东", "050"], ["广西", "110"], ["江苏", "060"], ["浙江", "070"], ["安徽", "080"],
+                    ["福建", "090"], ["山东", "250"], ["河北", "140"], ["山西", "260"], ["内蒙古", "220"], ["辽宁", "210"], ["吉林", "190"],
+                    ["黑龙江", "160"], ["河南", "150"], ["湖北", "170"], ["湖南", "180"], ["贵州", "120"], ["四川", "280"], ["云南", "310"],
+                    ["西藏", "290"], ["陕西", "270"], ["甘肃", "100"], ["青海", "240"], ["宁夏", "230"], ["新疆", "300"], ["海南", "130"],
+                    ["台湾", "340"], ["香港", "320"], ["澳门", "330"]
+                ];
+                provinces.forEach(function(province) {
+                    var provinceName = province[0];
+                    var hasProvince = cityData.some(function(city) {
+                        return city[0] === provinceName;
+                    });
+                    if (!hasProvince) {
+                        cityData.push(province);
+                    }
+                });
+            }
+            
+            // 只从 /static/city_data.json 加载城市数据，精简逻辑
+            function loadCityData() {
+                $.ajax({
+                    url: '/static/city_data.json', // 只用这一个路径
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data && data.length > 0) {
+                            // 对城市数据进行去重处理
+                            cityData = removeDuplicateCities(data);
+                            cityDataLoaded = true;
+                            // 补充省份数据（如有必要）
+                            addProvinceData();
+                            // 构建拼音首字母索引
+                            buildPinyinIndex();
+                        } else {
+                            // 数据为空时使用内置省份数据
+                            useBuiltinProvinceData();
+                        }
+                    },
+                    error: function() {
+                        // 加载失败时使用内置省份数据
+                        useBuiltinProvinceData();
+                    }
+                });
+            }
+            
+            // 城市数据去重函数
+            function removeDuplicateCities(cities) {
+                // 使用对象作为哈希表记录已存在的城市名
+                var uniqueCities = [];
+                var cityNames = {};
+                
+                // 遍历所有城市数据
+                cities.forEach(function(city) {
+                    var cityName = city[0];
+                    // 如果城市名不在哈希表中，则添加到结果数组
+                    if (!cityNames[cityName]) {
+                        cityNames[cityName] = true;
+                        uniqueCities.push(city);
+                    }
+                });
+                
+                console.log('城市数据去重：原始数量 ' + cities.length + '，去重后数量 ' + uniqueCities.length);
+                return uniqueCities;
+            }
+            
+            // 使用内置的省份数据
+            function useBuiltinProvinceData() {
+                console.warn('使用内置的省份数据');
+                cityData = [
+                    ["全国", "410"],
+                    ["北京", "010"],
+                    ["上海", "020"],
+                    ["广州", "050020"],
+                    ["深圳", "050090"],
+                    ["杭州", "070020"],
+                    ["成都", "280020"],
+                    ["武汉", "170020"],
+                    ["西安", "270020"],
+                    ["南京", "060020"],
+                    ["南宁", "110020"],
+                    ["南通", "060070"],
+                    ["济南", "250020"],
+                    ["天津", "030"],
+                    ["重庆", "040"],
+                    ["苏州", "060080"],
+                    ["广东", "050"],
+                    ["广西", "110"],
+                    ["广安", "280150"],
+                    ["广元", "280110"],
+                    ["江西", "200"],
+                    ["江苏", "060"],
+                    ["浙江", "070"],
+                    ["安徽", "080"],
+                    ["福建", "090"],
+                    ["山东", "250"],
+                    ["河北", "140"],
+                    ["山西", "260"],
+                    ["内蒙古", "220"],
+                    ["辽宁", "210"],
+                    ["吉林", "190"],
+                    ["黑龙江", "160"],
+                    ["河南", "150"],
+                    ["湖北", "170"],
+                    ["湖南", "180"],
+                    ["贵州", "120"],
+                    ["四川", "280"],
+                    ["云南", "310"],
+                    ["西藏", "290"],
+                    ["陕西", "270"],
+                    ["甘肃", "100"],
+                    ["青海", "240"],
+                    ["宁夏", "230"],
+                    ["新疆", "300"],
+                    ["海南", "130"],
+                    ["台湾", "340"],
+                    ["香港", "320"],
+                    ["澳门", "330"]
+                ];
+                cityDataLoaded = true;
+                buildPinyinIndex(); // 新增：构建拼音索引
+                
+                // 检查包含"广"的城市
+                logCitiesWithKeyword('广');
+            }
+            
+            // 记录包含特定关键词的城市
+            function logCitiesWithKeyword(keyword) {
+                var matchedCities = cityData.filter(function(city) {
+                    return city[0].indexOf(keyword) !== -1;
+                });
+                console.log('包含"' + keyword + '"的城市/省份数量: ' + matchedCities.length);
+                console.log('包含"' + keyword + '"的城市/省份列表:', matchedCities);
+            }
+            
+            // 立即加载城市数据
+            loadCityData();
+            
+            // 城市输入框聚焦时显示热门城市
+            $('#city-input').on('focus', function() {
+                var $results = $('#city-search-results');
+                $results.empty();
+                // 只显示热门城市标签
+                $('#hot-cities .city-tag').each(function() {
+                    var cityName = $(this).data('city');
+                    $results.append('<div class="city-option hot-option" data-city="' + cityName + '">' + cityName + '</div>');
+                });
+                $results.show();
+            });
+            
+            // 城市输入框搜索功能，所有匹配项统一展示
+            $('#city-input').on('input', function() {
+                var keyword = $(this).val().trim();
+                var $results = $('#city-search-results');
+                $results.empty();
+                if (keyword === '') {
+                    $results.hide();
+                    return;
+                }
+                if (!cityDataLoaded) {
+                    $results.append('<div class="loading-result">城市数据加载中，请稍候...</div>');
+                    $results.show();
+                    return;
+                }
+                var matches = [];
+                var keywordLower = keyword.toLowerCase();
+                // 遍历所有城市和省份，统一匹配
+                cityData.forEach(function(city) {
+                    var cityName = city[0];
+                    var cityCode = city[1];
+                    var match = false;
+                    // 汉字模糊匹配
+                    if (cityName && cityName.toLowerCase().indexOf(keywordLower) !== -1) {
+                        match = true;
+                    }
+                    // 拼音首字母匹配
+                    if (!match && cityPinyinMap[cityName] && cityPinyinMap[cityName].indexOf(keywordLower) !== -1) {
+                        match = true;
+                    }
+                    if (match) {
+                        matches.push(city);
+                    }
+                });
+                if (matches.length > 0) {
+                    $results.append('<div class="search-info">找到 ' + matches.length + ' 个匹配项</div>');
+                    matches.forEach(function(item) {
+                        var name = item[0];
+                        var code = item[1];
+                        var highlightedName = highlightMatch(name, keywordLower, cityPinyinMap[name]);
+                        $results.append('<div class="city-option" data-city="' + name + '">' + highlightedName + ' <span class="city-code">(' + code + ')</span></div>');
+                    });
+                    $results.show();
+                } else {
+                    $results.append('<div class="no-result">未找到匹配的城市或省份</div>');
+                    $results.show();
+                }
+            });
+            
+            // 高亮匹配部分，支持拼音和汉字
+            function highlightMatch(name, keywordLower, pinyin) {
+                if (!keywordLower) return name;
+                // 汉字高亮
+                var re = new RegExp('(' + keywordLower.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + ')', 'gi');
+                if (name.toLowerCase().indexOf(keywordLower) !== -1) {
+                    return name.replace(re, '<span class="highlight">$1</span>');
+                }
+                // 拼音首字母高亮（只高亮首字母）
+                if (pinyin && pinyin.indexOf(keywordLower) !== -1) {
+                    // 只高亮首字母部分
+                    var idx = pinyin.indexOf(keywordLower);
+                    var html = '';
+                    for (var i = 0; i < name.length; i++) {
+                        if (i >= idx && i < idx + keywordLower.length) {
+                            html += '<span class="highlight">' + name[i] + '</span>';
+                        } else {
+                            html += name[i];
+                        }
+                    }
+                    return html;
+                }
+                return name;
+            }
+            
+            // 点击城市选项
+            $(document).on('click', '.city-option', function() {
+                var cityName = $(this).data('city');
+                $('#city-input').val(cityName);
+                $('#city-search-results').hide();
+            });
+            
+            // 点击页面其他位置时隐藏搜索结果
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#city-input, #city-search-results').length) {
+                    $('#city-search-results').hide();
+                }
+            });
+
+            // 点击热门城市标签时，将城市名称填入输入框
+            $('.city-tag').on('click', function() {
+                var cityName = $(this).data('city');
+                $('#city-input').val(cityName);
+                $('#city-search-results').hide();
+            });
+
+            form.on('submit(start_spider)', function (data) {
+                var field = data.field;
+                console.log(field)
+                if (field.key_word == "") {
+                    layer.msg("关键字不能为空！")
+                    return false
+                }
+                if (field.page == "") {
+                    layer.msg("页数不能为空！")
+                    return false
+                }
+                if (field.city == "") {
+                    layer.msg("城市不能为空！")
+                    return false
+                }
+
+                document.getElementById("start_spider").innerHTML = '正在爬取请稍后...';
+                document.getElementById("start_spider").removeAttribute('lay-filter');
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/start_spider/',
+                    data: field,
+                    success: function (res) {
+                        layer.msg(res.msg);
+                        document.getElementById("start_spider").innerHTML = '开始爬取';
+                        document.getElementById("start_spider").setAttribute("lay-filter", "start_spider")
+                    },
+                    error: function (response) {
+                        layer.msg(response.msg);
+                    }
+                })
+
+            });
+        });
+    </script>
+    <style>
+        #hot-cities {
+            margin-top: 10px;
+        }
+        .city-tag {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        .city-tag:hover {
+            opacity: 0.8;
+        }
+        .city-search-dropdown {
+            display: none;
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid #e6e6e6;
+            border-top: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+            z-index: 999;
+        }
+        .city-option {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        .city-option:hover {
+            background-color: #f2f2f2;
+        }
+        .province-option {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+        .no-result {
+            padding: 8px 15px;
+            color: #999;
+            font-style: italic;
+        }
+        .loading-result {
+            padding: 8px 15px;
+            color: #1E9FFF;
+            font-style: italic;
+        }
+        .city-group-title {
+            padding: 8px 15px;
+            font-weight: bold;
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #eee;
+            border-top: 1px solid #eee;
+        }
+        .search-info {
+            padding: 8px 15px;
+            color: #999;
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #eee;
+        }
+        .city-code {
+            color: #999;
+            font-size: 12px;
+        }
+        .highlight {
+            color: #FF5722;
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}

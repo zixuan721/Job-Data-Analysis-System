@@ -1,0 +1,258 @@
+/* 自定义登录页样式 */
+body {
+    background: url('/static/背景.png') no-repeat center center fixed; /* 添加背景图片 */
+    background-size: cover;
+    overflow: hidden;
+}
+
+.layadmin-user-login {
+    position: relative;
+    left: 0;
+    top: 0;
+    padding: 110px 0;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+/* 背景动画效果 - 半透明覆盖层 */
+.bg-bubbles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.6) 100%); /* 半透明渐变覆盖层 */
+}
+
+.bg-bubbles li {
+    position: absolute;
+    list-style: none;
+    display: block;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.15);
+    bottom: -160px;
+    animation: square 25s infinite;
+    transition-timing-function: linear;
+}
+
+.bg-bubbles li:nth-child(1) {
+    left: 10%;
+}
+
+.bg-bubbles li:nth-child(2) {
+    left: 20%;
+    width: 80px;
+    height: 80px;
+    animation-delay: 2s;
+    animation-duration: 17s;
+}
+
+.bg-bubbles li:nth-child(3) {
+    left: 25%;
+    animation-delay: 4s;
+}
+
+.bg-bubbles li:nth-child(4) {
+    left: 40%;
+    width: 60px;
+    height: 60px;
+    animation-duration: 22s;
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.bg-bubbles li:nth-child(5) {
+    left: 70%;
+}
+
+.bg-bubbles li:nth-child(6) {
+    left: 80%;
+    width: 120px;
+    height: 120px;
+    animation-delay: 3s;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.bg-bubbles li:nth-child(7) {
+    left: 32%;
+    width: 160px;
+    height: 160px;
+    animation-delay: 7s;
+}
+
+.bg-bubbles li:nth-child(8) {
+    left: 55%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 15s;
+    animation-duration: 40s;
+}
+
+.bg-bubbles li:nth-child(9) {
+    left: 25%;
+    width: 10px;
+    height: 10px;
+    animation-delay: 2s;
+    animation-duration: 40s;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.bg-bubbles li:nth-child(10) {
+    left: 90%;
+    width: 160px;
+    height: 160px;
+    animation-delay: 11s;
+}
+
+@keyframes square {
+    0% {
+        transform: translateY(0);
+        border-radius: 0;
+    }
+    100% {
+        transform: translateY(-1000px) rotate(600deg);
+        border-radius: 50%;
+    }
+}
+
+/* 登录框样式 - 透明效果 */
+.layadmin-user-login-main {
+    width: 375px;
+    margin: 0 auto;
+    background-color: rgba(255, 255, 255, 0.15); /* 透明背景 */
+    border-radius: 10px;
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px); /* 背景模糊效果 */
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.layadmin-user-login-main:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
+    background-color: rgba(255, 255, 255, 0.2); /* 悬停时稍微增加不透明度 */
+}
+
+.layadmin-user-login-box {
+    padding: 30px;
+}
+
+.layadmin-user-login-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.layadmin-user-login-header h2 {
+    margin-bottom: 10px;
+    font-weight: 500;
+    font-size: 28px;
+    color: #fff; /* 文字颜色改为白色，适应透明背景 */
+    letter-spacing: 1px;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
+}
+
+.layadmin-user-login-header p {
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9); /* 文字颜色改为白色，适应透明背景 */
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
+}
+
+/* 输入框样式 */
+.layadmin-user-login-body .layui-form-item {
+    margin-bottom: 25px;
+}
+
+.layadmin-user-login-body .layui-input {
+    height: 45px;
+    padding-left: 45px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.3); /* 边框颜色适应透明背景 */
+    background-color: rgba(255, 255, 255, 0.2); /* 输入框背景半透明 */
+    color: #fff; /* 输入文字颜色为白色 */
+    transition: all 0.3s;
+}
+
+.layadmin-user-login-body .layui-input:focus {
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.25); /* 聚焦时稍微增加不透明度 */
+}
+
+.layadmin-user-login-body .layui-input::placeholder {
+    color: rgba(255, 255, 255, 0.7); /* 占位符文字颜色 */
+}
+
+.layadmin-user-login-icon {
+    left: 15px;
+    top: 8px;
+    color: rgba(255, 255, 255, 0.7); /* 图标颜色适应透明背景 */
+    transition: all 0.3s;
+}
+
+.layadmin-user-login-body .layui-form-item .layui-input:focus + .layadmin-user-login-icon {
+    color: #fff; /* 聚焦时图标颜色为白色 */
+}
+
+/* 按钮样式 */
+.layui-btn {
+    height: 45px;
+    line-height: 45px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.25); /* 按钮背景半透明 */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: #fff; /* 按钮文字颜色为白色 */
+    transition: all 0.3s;
+}
+
+.layui-btn:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.35); /* 悬停时增加不透明度 */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 链接样式 */
+.layadmin-user-jump-change {
+    color: rgba(255, 255, 255, 0.9); /* 链接颜色适应透明背景 */
+    font-size: 14px;
+    transition: all 0.3s;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* 添加文字阴影 */
+}
+
+.layadmin-user-jump-change:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* 页脚样式 */
+.layadmin-user-login-footer {
+    position: absolute;
+    left: 0;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+.layadmin-user-login-footer p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 768px) {
+    .layadmin-user-login-main {
+        width: 85%;
+    }
+    
+    .layadmin-user-login-box {
+        padding: 20px;
+    }
+} 

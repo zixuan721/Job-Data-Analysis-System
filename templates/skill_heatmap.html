@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <span>技能热度地图</span>
+                        <span class="layui-badge layui-bg-blue layuiadmin-badge">分析</span>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="layui-form layui-form-pane" style="margin-bottom: 15px;">
+                            <div class="layui-form-item">
+                                <div class="layui-inline">
+                                    <label class="layui-form-label">技能关键词</label>
+                                    <div class="layui-input-inline">
+                                        <select id="skill-select" lay-filter="skill-select" lay-search>
+                                            <option value="">全部技能</option>
+                                            <!-- 技能选项将通过AJAX动态加载 -->
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="layui-inline">
+                                    <button class="layui-btn" id="search-btn">查询</button>
+                                    <button class="layui-btn layui-btn-primary" id="reset-btn">重置</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="layui-row">
+                            <div class="layui-col-md12">
+                                <div id="skill-heatmap" style="width: 100%; height: 600px;">
+                                    <div class="map-loading">
+                                        <i class="layui-icon layui-icon-loading1 layui-anim layui-anim-rotate layui-anim-loop"></i>
+                                        <p>地图加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="layui-row" style="margin-top: 20px;">
+                            <div class="layui-col-md12">
+                                <div class="layui-card">
+                                    <div class="layui-card-header">热门技能排行</div>
+                                    <div class="layui-card-body">
+                                        <table class="layui-table" id="skill-table">
+                                            <colgroup>
+                                                <col width="60">
+                                                <col>
+                                                <col width="100">
+                                                <col width="100">
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th>排名</th>
+                                                    <th>技能名称</th>
+                                                    <th>需求数量</th>
+                                                    <th>操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- 技能排行将通过AJAX动态加载 -->
+                                                <tr>
+                                                    <td colspan="4" style="text-align: center;">
+                                                        <i class="layui-icon layui-icon-loading1 layui-anim layui-anim-rotate layui-anim-loop"></i>
+                                                        数据加载中...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加自适应显示的样式 -->
+    <style>
+        /* 确保地图容器有足够的高度 */
+        #skill-heatmap {
+            min-height: 600px;
+            height: calc(100vh - 300px); /* 响应式高度 */
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        /* 加载动画样式 */
+        .map-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .map-loading i {
+            font-size: 32px;
+            color: #1E9FFF;
+        }
+        
+        /* 技能标签样式 */
+        .skill-tag {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #1E9FFF;
+            color: #fff;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .skill-tag:hover {
+            background-color: #0d8aee;
+        }
+    </style>
+</body>
+{% endblock content %}
+
+{% block js %}
+<!-- 直接引入ECharts库 -->
+<script src="/static/echarts.min.js"></script>
+<!-- 直接引入中国地图数据 -->
+<script src="{% static "layuiadmin/china.js" %}"></script>
+<script>
+    // 等待页面加载完成
+    document.addEventListener('DOMContentLoaded', function() {
+        // 确保ECharts已加载
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts库未加载');
+            alert('ECharts库未加载，请刷新页面重试');
+            return;
+        }
+        
+        // 初始化Layui
+        layui.use(['form', 'table', 'layer'], function() {
+            var $ = layui.jquery,
+                form = layui.form,
+                table = layui.table,
+                layer = layui.layer;
+            
+            var myChart = null;
+            
+            // 初始化图表
+            function initChart() {
+                // 确保容器存在
+                var chartDom = document.getElementById('skill-heatmap');
+                if (!chartDom) {
+                    console.error('找不到地图容器');
+                    return;
+                }
+                
+                console.log('初始化ECharts实例...');
+                
+                // 初始化ECharts实例
+                myChart = echarts.init(chartDom);
+                
+                // 显示加载动画
+                myChart.showLoading({
+                    text: '数据加载中...',
+                    color: '#1E9FFF',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)'
+                });
+                
+                // 检查中国地图是否已注册
+                if (!echarts.getMap('china')) {
+                    console.error('中国地图未注册');
+                    layer.msg('中国地图数据未加载，请刷新页面重试');
+                    return;
+                }
+                
+                // 加载实际数据
+                loadData();
+                
+                // 监听窗口大小变化，自动调整图表大小
+                window.addEventListener('resize', function() {
+                    if (myChart) {
+                        myChart.resize();
+                    }
+                });
+            }
+            
+            // 加载数据
+            function loadData(skill) {
+                console.log('开始加载数据，技能关键词：', skill || '全部');
+                
+                // 显示加载动画
+                if (myChart) {
+                    myChart.showLoading({
+                        text: '数据加载中...',
+                        color: '#1E9FFF',
+                        textColor: '#000',
+                        maskColor: 'rgba(255, 255, 255, 0.8)'
+                    });
+                }
+                
+                $.ajax({
+                    url: '/get_skill_heatmap_data/',
+                    type: 'GET',
+                    data: {
+                        skill: skill || ''
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+                        console.log('数据加载成功：', res);
+                        // 隐藏加载动画
+                        if (myChart) {
+                            myChart.hideLoading();
+                        }
+                        
+                        if (res.code !== 0) {
+                            layer.msg(res.msg || '加载数据失败');
+                            return;
+                        }
+                        
+                        // 处理城市数据，去除"市"后缀
+                        var processedData = [];
+                        if (res.data && res.data.length > 0) {
+                            processedData = res.data.map(function(item) {
+                                // 处理城市名称，去除可能的"市"、"省"、"自治区"等后缀
+                                var name = item.name.replace(/(市|省|自治区|特别行政区|壮族|维吾尔|回族|藏族)$/, '');
+                                return {
+                                    name: name,
+                                    value: item.value
+                                };
+                            });
+                            console.log('处理后的地图数据：', processedData);
+                        } else {
+                            console.warn('返回的地图数据为空');
+                        }
+                        
+                        // 更新技能选择下拉框
+                        updateSkillSelect(res.skill_list, res.current_skill);
+                        
+                        // 更新技能排行表格
+                        updateSkillTable(res.skill_list);
+                        
+                        // 更新地图
+                        updateMap(processedData, res.max, res.min, res.current_skill);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('请求错误:', status, error);
+                        if (myChart) {
+                            myChart.hideLoading();
+                        }
+                        layer.msg('网络错误，请稍后重试');
+                    }
+                });
+            }
+            
+            // 更新技能选择下拉框
+            function updateSkillSelect(skillList, currentSkill) {
+                var $select = $('#skill-select');
+                
+                // 检查skillList是否存在且不为空
+                if (!skillList || skillList.length === 0) {
+                    console.warn('技能列表为空');
+                    return;
+                }
+                
+                console.log('更新技能下拉框，当前选中：', currentSkill);
+                
+                // 清空并重新填充下拉框
+                $select.empty();
+                $select.append('<option value="">全部技能</option>');
+                
+                // 排序技能列表（按需求数量降序）
+                skillList.sort(function(a, b) {
+                    return b.count - a.count;
+                });
+                
+                // 添加技能选项
+                $.each(skillList, function(index, item) {
+                    // 确保有效的技能名称
+                    if (!item.name) {
+                        return;
+                    }
+                    
+                    var selected = (currentSkill && currentSkill === item.name) ? 'selected' : '';
+                    $select.append('<option value="' + item.name + '" ' + selected + '>' + item.name + ' (' + item.count + ')</option>');
+                });
+                
+                // 重新渲染下拉框
+                form.render('select');
+            }
+            
+            // 更新技能排行表格
+            function updateSkillTable(skillList) {
+                var $tbody = $('#skill-table tbody');
+                
+                // 检查skillList是否存在且不为空
+                if (!skillList || skillList.length === 0) {
+                    console.warn('技能列表为空');
+                    $tbody.html('<tr><td colspan="4" style="text-align: center;">暂无数据</td></tr>');
+                    return;
+                }
+                
+                console.log('更新技能排行表格，数据量：', skillList.length);
+                
+                // 清空表格内容
+                $tbody.empty();
+                
+                // 排序技能列表（按需求数量降序）
+                skillList.sort(function(a, b) {
+                    return b.count - a.count;
+                });
+                
+                // 只显示前20个技能
+                var displayList = skillList.slice(0, 20);
+                
+                // 添加技能数据行
+                $.each(displayList, function(index, item) {
+                    // 设置排名样式
+                    var rankClass = '';
+                    if (index === 0) rankClass = 'layui-bg-red';
+                    else if (index === 1) rankClass = 'layui-bg-orange';
+                    else if (index === 2) rankClass = 'layui-bg-green';
+                    
+                    var rankHtml = rankClass ? 
+                        '<span class="layui-badge ' + rankClass + '">' + (index + 1) + '</span>' : 
+                        (index + 1);
+                    
+                    // 创建表格行
+                    var html = '<tr>' +
+                        '<td>' + rankHtml + '</td>' +
+                        '<td>' + item.name + '</td>' +
+                        '<td>' + item.count + '</td>' +
+                        '<td><button class="layui-btn layui-btn-xs view-btn" data-skill="' + item.name + '">查看分布</button></td>' +
+                        '</tr>';
+                    
+                    $tbody.append(html);
+                });
+                
+                // 绑定查看按钮事件
+                $('.view-btn').on('click', function() {
+                    var skill = $(this).data('skill');
+                    console.log('查看技能分布：', skill);
+                    
+                    // 更新选择框
+                    $('#skill-select').val(skill);
+                    form.render('select');
+                    
+                    // 加载数据
+                    loadData(skill);
+                });
+            }
+            
+            // 更新地图
+            function updateMap(data, max, min, currentSkill) {
+                if (!myChart) {
+                    console.error('地图实例不存在');
+                    return;
+                }
+                
+                console.log('更新地图数据：', data.length, '条记录');
+                
+                // 检查中国地图是否已注册
+                if (!echarts.getMap('china')) {
+                    console.error('中国地图未注册');
+                    layer.msg('中国地图数据未加载，请刷新页面重试');
+                    return;
+                }
+                
+                // 检查数据是否为空
+                if (!data || data.length === 0) {
+                    console.warn('地图数据为空，显示空地图');
+                    // 创建空数据，确保地图仍然显示
+                    data = [];
+                }
+                
+                var title = currentSkill ? '技能 "' + currentSkill + '" 的地区分布热度' : '职位地区分布热度';
+                
+                // 确保最大值和最小值有效
+                if (typeof max !== 'number' || isNaN(max)) {
+                    console.warn('最大值无效，使用默认值1000');
+                    max = 1000;
+                }
+                
+                if (typeof min !== 'number' || isNaN(min)) {
+                    console.warn('最小值无效，使用默认值0');
+                    min = 0;
+                }
+                
+                // 确保最小值不为0，避免颜色区分不明显
+                if (min === max) {
+                    console.warn('最大值等于最小值，调整最小值');
+                    min = 0;
+                }
+                
+                var option = {
+                    title: {
+                        text: title,
+                        subtext: '数据来源：职位推荐系统',
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: function(params) {
+                            var value = params.value;
+                            if (value === undefined || value === null) {
+                                value = 0;
+                            }
+                            return params.name + ': ' + value + ' 个职位';
+                        }
+                    },
+                    visualMap: {
+                        min: min,
+                        max: max,
+                        text: ['高', '低'],
+                        realtime: false,
+                        calculable: true,
+                        inRange: {
+                            color: ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695']
+                        }
+                    },
+                    toolbox: {
+                        show: true,
+                        orient: 'vertical',
+                        left: 'right',
+                        top: 'center',
+                        feature: {
+                            dataView: {readOnly: false},
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+                    series: [
+                        {
+                            name: '职位数量',
+                            type: 'map',
+                            map: 'china',  // 使用注册的中国地图
+                            roam: true,
+                            label: {
+                                show: true,
+                                formatter: '{b}'
+                            },
+                            emphasis: {
+                                label: {
+                                    show: true,
+                                    fontSize: 12,
+                                    fontWeight: 'bold'
+                                },
+                                itemStyle: {
+                                    areaColor: '#ffd700'
+                                }
+                            },
+                            data: data
+                        }
+                    ]
+                };
+                
+                // 设置图表选项
+                try {
+                    console.log('设置地图选项');
+                    myChart.setOption(option, true);  // 添加true参数，完全覆盖之前的设置
+                    console.log('地图设置成功');
+                } catch (e) {
+                    console.error('设置地图选项失败：', e);
+                    layer.msg('地图渲染失败：' + e.message);
+                }
+            }
+            
+            // 绑定查询按钮事件
+            $('#search-btn').on('click', function() {
+                var skill = $('#skill-select').val();
+                console.log('查询技能：', skill);
+                loadData(skill);
+            });
+            
+            // 绑定重置按钮事件
+            $('#reset-btn').on('click', function() {
+                $('#skill-select').val('');
+                form.render('select');
+                console.log('重置查询');
+                loadData();
+            });
+            
+            // 初始化图表
+            initChart();
+        });
+    });
+</script>
+{% endblock js %} 

@@ -1,0 +1,36 @@
+{
+    "model_type": "linear",
+    "model_filename": "linear_1767881562.pkl",
+    "created_time": "2026-01-08 22:12:42",
+    "categorical_features": [
+        "education",
+        "experience",
+        "place",
+        "scale",
+        "key_word",
+        "position_level",
+        "position_popularity_bin",
+        "city_popularity_bin"
+    ],
+    "numerical_features": [
+        "salary_ratio",
+        "position_popularity",
+        "city_popularity"
+    ],
+    "results": {
+        "model_type": "linear",
+        "min_salary": {
+            "mae": 0.43010792371691386,
+            "r2": -0.015209907611940077,
+            "mae_orig": 7.492002482915204,
+            "r2_orig": 0.07365847304672846
+        },
+        "max_salary": {
+            "mae": 0.28807851150488983,
+            "r2": 0.5123191895094421,
+            "mae_orig": 6.991743677116875,
+            "r2_orig": 0.4588278167030093
+        },
+        "feature_importance": {}
+    }
+}
