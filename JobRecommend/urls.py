@@ -68,4 +68,8 @@ urlpatterns = [
     path('get_model_info/', views.get_model_info, name="get_model_info"),  # 获取模型信息
     path('get_available_models/', views.get_available_models, name="get_available_models"),  # 获取可用模型列表
     path('set_active_model/', views.set_active_model, name="set_active_model"),  # 设置活跃模型
+
+    # EDA综合分析
+    path('eda_analysis/', views.eda_analysis, name="eda_analysis"),
+    path('get_eda_data/', views.get_eda_data, name="get_eda_data"),
 ]

@@ -2092,3 +2092,648 @@ def calculate_avg_salary(jobs):
             
     # 计算平均值
     return round(total_salary / valid_count, 1) if valid_count > 0 else 0
+
+
+# ==================== EDA Analysis Views ====================
+
+def eda_analysis(request):
+    """EDA综合分析页面"""
+    return render(request, "eda_analysis.html")
+
+
+def _parse_salary_to_avg(salary_str):
+    """Parse salary string like '15-25k' or '15-25K' to average value in K"""
+    try:
+        m = re.search(r'(\d+)[–\-](\d+)\s*[Kk]', salary_str)
+        if m:
+            return (int(m.group(1)) + int(m.group(2))) / 2.0
+        m2 = re.search(r'(\d+)\s*[Kk]', salary_str)
+        if m2:
+            return float(m2.group(1))
+    except Exception:
+        pass
+    return None
+
+
+def _clean_city(place_str):
+    """Extract top-level city name from place like '北京-朝阳区'"""
+    if not place_str:
+        return ''
+    city = place_str.split('-')[0].strip()
+    city = city.replace('市', '').strip()
+    return city
+
+
+def _extract_skills(text, skill_list):
+    """Extract matched skills from text"""
+    found = []
+    if not text:
+        return found
+    for skill in skill_list:
+        if skill.lower() in text.lower():
+            found.append(skill)
+    return found
+
+
+def _boxplot_stats(values):
+    """Compute boxplot statistics from a list of numbers"""
+    if not values:
+        return {'min': 0, 'q1': 0, 'median': 0, 'q3': 0, 'max': 0}
+    arr = sorted(values)
+    n = len(arr)
+    def pct(p):
+        idx = p / 100.0 * (n - 1)
+        lo, hi = int(idx), min(int(idx) + 1, n - 1)
+        return arr[lo] + (arr[hi] - arr[lo]) * (idx - lo)
+    q1, median, q3 = pct(25), pct(50), pct(75)
+    iqr = q3 - q1
+    lo_fence, hi_fence = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    filtered = [v for v in arr if lo_fence <= v <= hi_fence]
+    return {
+        'min': round(min(filtered) if filtered else arr[0], 1),
+        'q1': round(q1, 1),
+        'median': round(median, 1),
+        'q3': round(q3, 1),
+        'max': round(max(filtered) if filtered else arr[-1], 1),
+    }
+
+
+def get_eda_data(request):
+    """
+    Comprehensive EDA data API for all 20+ charts.
+    Accepts GET params: city, keyword, education, experience, salary_min, salary_max
+    """
+    SKILL_LIST = [
+        'Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'React', 'Vue',
+        'Angular', 'Node.js', 'Django', 'Flask', 'Spring', 'MySQL', 'Oracle',
+        'MongoDB', 'Redis', 'Docker', 'Kubernetes', 'Linux', 'Git',
+        '机器学习', '深度学习', '数据分析', '大数据', 'Hadoop', 'Spark',
+        '前端', '后端', '全栈', '测试', '运维', '产品', 'SQL', 'R语言',
+        'TensorFlow', 'PyTorch', 'Tableau', 'Power BI', '爬虫',
+    ]
+
+    EXP_ORDER = ['不限', '1年以内', '1-3年', '3-5年', '5-10年', '10年以上']
+    EDU_ORDER = ['不限', '大专', '本科', '硕士', '博士']
+
+    try:
+        # ---------- filters ----------
+        city_f = request.GET.get('city', '').strip()
+        keyword_f = request.GET.get('keyword', '').strip()
+        edu_f = request.GET.get('education', '').strip()
+        exp_f = request.GET.get('experience', '').strip()
+        sal_min_f = request.GET.get('salary_min', '')
+        sal_max_f = request.GET.get('salary_max', '')
+
+        qs = models.JobData.objects.all()
+        if city_f:
+            qs = qs.filter(place__icontains=city_f)
+        if keyword_f:
+            qs = qs.filter(key_word__icontains=keyword_f)
+        if edu_f:
+            qs = qs.filter(education__icontains=edu_f)
+        if exp_f:
+            qs = qs.filter(experience__icontains=exp_f)
+
+        jobs = list(qs.values(
+            'name', 'salary', 'place', 'education', 'experience',
+            'company', 'label', 'scale', 'key_word'
+        ))
+
+        if not jobs:
+            raise ValueError("empty")
+
+        # ---------- salary parsing ----------
+        for j in jobs:
+            j['avg_salary'] = _parse_salary_to_avg(j.get('salary', ''))
+
+        # salary filter
+        if sal_min_f:
+            try:
+                smin = float(sal_min_f)
+                jobs = [j for j in jobs if j['avg_salary'] and j['avg_salary'] >= smin]
+            except Exception:
+                pass
+        if sal_max_f:
+            try:
+                smax = float(sal_max_f)
+                jobs = [j for j in jobs if j['avg_salary'] and j['avg_salary'] <= smax]
+            except Exception:
+                pass
+
+        all_salaries = [j['avg_salary'] for j in jobs if j['avg_salary'] is not None]
+
+        # ---------- 1. top_jobs ----------
+        from collections import Counter, defaultdict
+        job_counter = Counter(j['name'] for j in jobs if j['name'])
+        top20_jobs = job_counter.most_common(20)
+        top_jobs = {
+            'names': [x[0] for x in top20_jobs],
+            'values': [x[1] for x in top20_jobs],
+        }
+
+        # ---------- 2. top_cities ----------
+        city_counter = Counter(_clean_city(j['place']) for j in jobs if j['place'])
+        top20_cities = city_counter.most_common(20)
+        top_cities = {
+            'names': [x[0] for x in top20_cities],
+            'values': [x[1] for x in top20_cities],
+        }
+
+        # ---------- 3. salary_dist (histogram) ----------
+        bins_labels = ['5K以下', '5-10K', '10-15K', '15-20K', '20-30K', '30-50K', '50K以上']
+        bins_counts = [0] * 7
+        for s in all_salaries:
+            if s < 5:
+                bins_counts[0] += 1
+            elif s < 10:
+                bins_counts[1] += 1
+            elif s < 15:
+                bins_counts[2] += 1
+            elif s < 20:
+                bins_counts[3] += 1
+            elif s < 30:
+                bins_counts[4] += 1
+            elif s < 50:
+                bins_counts[5] += 1
+            else:
+                bins_counts[6] += 1
+        salary_dist = {'bins': bins_labels, 'values': bins_counts}
+
+        # ---------- 4. salary_box ----------
+        stats = _boxplot_stats(all_salaries)
+        iqr = stats['q3'] - stats['q1']
+        lo_f = stats['q1'] - 1.5 * iqr
+        hi_f = stats['q3'] + 1.5 * iqr
+        outliers = [round(s, 1) for s in all_salaries if s < lo_f or s > hi_f][:50]
+        salary_box = {**stats, 'outliers': outliers}
+
+        # ---------- 5. edu_dist ----------
+        edu_counter = Counter(j['education'] for j in jobs if j['education'])
+        edu_dist = [{'name': k, 'value': v} for k, v in edu_counter.items()]
+
+        # ---------- 6. exp_dist ----------
+        exp_counter = Counter(j['experience'] for j in jobs if j['experience'])
+        # map to ordered labels
+        def normalize_exp(e):
+            if not e:
+                return '不限'
+            for label in EXP_ORDER:
+                if label in e or e in label:
+                    return label
+            return e
+        exp_norm = Counter()
+        for j in jobs:
+            exp_norm[normalize_exp(j.get('experience', ''))] += 1
+        exp_ordered = [(l, exp_norm.get(l, 0)) for l in EXP_ORDER if exp_norm.get(l, 0) > 0]
+        exp_dist = {
+            'names': [x[0] for x in exp_ordered],
+            'values': [x[1] for x in exp_ordered],
+        }
+
+        # ---------- 7. scale_dist ----------
+        scale_counter = Counter(j['scale'] for j in jobs if j['scale'])
+        scale_dist = [{'name': k, 'value': v} for k, v in scale_counter.most_common(10)]
+
+        # ---------- 8. label_dist ----------
+        label_counter = Counter()
+        for j in jobs:
+            if j['label']:
+                for lbl in re.split(r'[,，、\s]+', j['label']):
+                    lbl = lbl.strip()
+                    if lbl and len(lbl) >= 2:
+                        label_counter[lbl] += 1
+        top_labels = label_counter.most_common(20)
+        label_dist = {
+            'names': [x[0] for x in top_labels],
+            'values': [x[1] for x in top_labels],
+        }
+
+        # ---------- 9. city_salary ----------
+        city_sal_map = defaultdict(list)
+        for j in jobs:
+            c = _clean_city(j['place'])
+            if c and j['avg_salary']:
+                city_sal_map[c].append(j['avg_salary'])
+        city_avg = {c: round(sum(v) / len(v), 1) for c, v in city_sal_map.items() if v}
+        top_city_sal = sorted(city_avg.items(), key=lambda x: x[1], reverse=True)[:15]
+        city_salary = {
+            'cities': [x[0] for x in top_city_sal],
+            'salaries': [x[1] for x in top_city_sal],
+        }
+
+        # ---------- 10. exp_salary ----------
+        exp_sal_map = defaultdict(list)
+        for j in jobs:
+            e = normalize_exp(j.get('experience', ''))
+            if j['avg_salary']:
+                exp_sal_map[e].append(j['avg_salary'])
+        exp_salary = {
+            'exp_labels': [],
+            'boxes': [],
+        }
+        for label in EXP_ORDER:
+            if label in exp_sal_map:
+                exp_salary['exp_labels'].append(label)
+                exp_salary['boxes'].append(_boxplot_stats(exp_sal_map[label]))
+
+        # ---------- 11. edu_salary ----------
+        edu_sal_map = defaultdict(list)
+        for j in jobs:
+            e = j.get('education', '') or '不限'
+            if j['avg_salary']:
+                edu_sal_map[e].append(j['avg_salary'])
+        edu_salary = {'edu_labels': [], 'boxes': []}
+        for label in EDU_ORDER:
+            if label in edu_sal_map:
+                edu_salary['edu_labels'].append(label)
+                edu_salary['boxes'].append(_boxplot_stats(edu_sal_map[label]))
+        # also add unlisted
+        for k in edu_sal_map:
+            if k not in EDU_ORDER:
+                edu_salary['edu_labels'].append(k)
+                edu_salary['boxes'].append(_boxplot_stats(edu_sal_map[k]))
+
+        # ---------- 12. keyword_salary ----------
+        kw_sal_map = defaultdict(list)
+        for j in jobs:
+            kw = j.get('key_word', '') or ''
+            if kw and j['avg_salary']:
+                kw_sal_map[kw].append(j['avg_salary'])
+        kw_avg = {k: round(sum(v) / len(v), 1) for k, v in kw_sal_map.items() if v}
+        top_kw_sal = sorted(kw_avg.items(), key=lambda x: x[1], reverse=True)[:15]
+        keyword_salary = {
+            'keywords': [x[0] for x in top_kw_sal],
+            'salaries': [x[1] for x in top_kw_sal],
+        }
+
+        # ---------- 13. scale_salary ----------
+        sc_sal_map = defaultdict(list)
+        for j in jobs:
+            sc = j.get('scale', '') or ''
+            if sc and j['avg_salary']:
+                sc_sal_map[sc].append(j['avg_salary'])
+        sc_avg = {k: round(sum(v) / len(v), 1) for k, v in sc_sal_map.items() if v}
+        scale_salary = {
+            'scales': list(sc_avg.keys()),
+            'salaries': list(sc_avg.values()),
+        }
+
+        # ---------- 14. keyword_exp (100% stacked) ----------
+        kw_exp_map = defaultdict(lambda: defaultdict(int))
+        all_kws = set()
+        for j in jobs:
+            kw = j.get('key_word', '') or ''
+            e = normalize_exp(j.get('experience', ''))
+            if kw:
+                kw_exp_map[kw][e] += 1
+                all_kws.add(kw)
+        top_kws = [k for k, _ in Counter({k: sum(v.values()) for k, v in kw_exp_map.items()}).most_common(10)]
+        exp_labels_present = [l for l in EXP_ORDER if any(kw_exp_map[k].get(l, 0) > 0 for k in top_kws)]
+        kw_exp_series = {}
+        for el in exp_labels_present:
+            row = []
+            for kw in top_kws:
+                total = sum(kw_exp_map[kw].values()) or 1
+                row.append(round(kw_exp_map[kw].get(el, 0) / total * 100, 1))
+            kw_exp_series[el] = row
+        keyword_exp = {
+            'keywords': top_kws,
+            'exp_labels': exp_labels_present,
+            'series': kw_exp_series,
+        }
+
+        # ---------- 15. keyword_edu (100% stacked) ----------
+        kw_edu_map = defaultdict(lambda: defaultdict(int))
+        for j in jobs:
+            kw = j.get('key_word', '') or ''
+            e = j.get('education', '') or '不限'
+            if kw:
+                kw_edu_map[kw][e] += 1
+        edu_labels_present = [l for l in EDU_ORDER if any(kw_edu_map[k].get(l, 0) > 0 for k in top_kws)]
+        kw_edu_series = {}
+        for el in edu_labels_present:
+            row = []
+            for kw in top_kws:
+                total = sum(kw_edu_map[kw].values()) or 1
+                row.append(round(kw_edu_map[kw].get(el, 0) / total * 100, 1))
+            kw_edu_series[el] = row
+        keyword_edu = {
+            'keywords': top_kws,
+            'edu_labels': edu_labels_present,
+            'series': kw_edu_series,
+        }
+
+        # ---------- 16. edu_exp_salary heatmap ----------
+        ees_map = defaultdict(list)
+        for j in jobs:
+            edu = j.get('education', '') or '不限'
+            exp = normalize_exp(j.get('experience', ''))
+            if j['avg_salary']:
+                ees_map[(edu, exp)].append(j['avg_salary'])
+        ees_avg = {k: round(sum(v) / len(v), 1) for k, v in ees_map.items() if v}
+        edu_exp_edu_labels = [l for l in EDU_ORDER if any(k[0] == l for k in ees_avg)]
+        edu_exp_exp_labels = [l for l in EXP_ORDER if any(k[1] == l for k in ees_avg)]
+        matrix = []
+        for exp_l in edu_exp_exp_labels:
+            row = []
+            for edu_l in edu_exp_edu_labels:
+                row.append(ees_avg.get((edu_l, exp_l), None))
+            matrix.append(row)
+        edu_exp_salary = {
+            'edu_labels': edu_exp_edu_labels,
+            'exp_labels': edu_exp_exp_labels,
+            'matrix': matrix,
+        }
+
+        # ---------- 17. skills ----------
+        skill_counter = Counter()
+        for j in jobs:
+            text = (j.get('name', '') or '') + ' ' + (j.get('label', '') or '')
+            for sk in _extract_skills(text, SKILL_LIST):
+                skill_counter[sk] += 1
+        top_skills = skill_counter.most_common(30)
+        skills = {
+            'names': [x[0] for x in top_skills],
+            'values': [x[1] for x in top_skills],
+        }
+
+        # ---------- 18. skill_cooccur ----------
+        cooccur = Counter()
+        all_job_skills = []
+        for j in jobs:
+            text = (j.get('name', '') or '') + ' ' + (j.get('label', '') or '')
+            found = _extract_skills(text, SKILL_LIST)
+            all_job_skills.append(found)
+            for i in range(len(found)):
+                for k in range(i + 1, len(found)):
+                    pair = tuple(sorted([found[i], found[k]]))
+                    cooccur[pair] += 1
+        top_nodes = {s for s, _ in skill_counter.most_common(15)}
+        nodes = [{'name': s, 'value': skill_counter[s]} for s in top_nodes]
+        links = [
+            {'source': p[0], 'target': p[1], 'value': c}
+            for p, c in cooccur.most_common(30)
+            if p[0] in top_nodes and p[1] in top_nodes
+        ]
+        skill_cooccur = {'nodes': nodes, 'links': links}
+
+        # ---------- 19. sankey ----------
+        kw_skill_map = defaultdict(Counter)
+        for j in jobs:
+            kw = j.get('key_word', '') or ''
+            text = (j.get('name', '') or '') + ' ' + (j.get('label', '') or '')
+            if kw:
+                for sk in _extract_skills(text, SKILL_LIST):
+                    kw_skill_map[kw][sk] += 1
+        top_kw_sankey = [k for k, _ in Counter({k: sum(v.values()) for k, v in kw_skill_map.items()}).most_common(8)]
+        sankey_nodes = set(top_kw_sankey)
+        sankey_links_raw = []
+        for kw in top_kw_sankey:
+            for sk, cnt in kw_skill_map[kw].most_common(5):
+                sankey_nodes.add(sk)
+                sankey_links_raw.append({'source': kw, 'target': sk, 'value': cnt})
+        sankey = {
+            'nodes': [{'name': n} for n in sankey_nodes],
+            'links': sankey_links_raw,
+        }
+
+        # ---------- 20. map_data ----------
+        map_data = [{'name': c, 'value': cnt} for c, cnt in city_counter.most_common(50)]
+
+        # ---------- 21. kpi ----------
+        avg_sal = round(sum(all_salaries) / len(all_salaries), 1) if all_salaries else 0
+        top_skill_name = skill_counter.most_common(1)[0][0] if skill_counter else 'N/A'
+        unique_cities = len(city_counter)
+        unique_jobs = len(job_counter)
+        kpi = {
+            'total': len(jobs),
+            'avg_salary': avg_sal,
+            'median_salary': round(_boxplot_stats(all_salaries)['median'], 1) if all_salaries else 0,
+            'top_skill': top_skill_name,
+            'unique_cities': unique_cities,
+            'unique_jobs': unique_jobs,
+        }
+
+        return JsonResponse({
+            'status': 'ok',
+            'source': 'db',
+            'top_jobs': top_jobs,
+            'top_cities': top_cities,
+            'salary_dist': salary_dist,
+            'salary_box': salary_box,
+            'edu_dist': edu_dist,
+            'exp_dist': exp_dist,
+            'scale_dist': scale_dist,
+            'label_dist': label_dist,
+            'city_salary': city_salary,
+            'exp_salary': exp_salary,
+            'edu_salary': edu_salary,
+            'keyword_salary': keyword_salary,
+            'scale_salary': scale_salary,
+            'keyword_exp': keyword_exp,
+            'keyword_edu': keyword_edu,
+            'edu_exp_salary': edu_exp_salary,
+            'skills': skills,
+            'skill_cooccur': skill_cooccur,
+            'sankey': sankey,
+            'map_data': map_data,
+            'kpi': kpi,
+        })
+
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning('get_eda_data fell back to sample data', exc_info=True)
+        # --- Fallback sample data ---
+        sample_jobs = [
+            {'name': 'Python开发工程师', 'salary': '15-25K', 'place': '北京-朝阳区', 'education': '本科', 'experience': '3-5年', 'key_word': 'Python', 'label': 'Python,Django,MySQL', 'scale': '100-500人', 'company': '科技A'},
+            {'name': 'Java后端工程师', 'salary': '18-30K', 'place': '上海-浦东新区', 'education': '本科', 'experience': '3-5年', 'key_word': 'Java', 'label': 'Java,Spring,MySQL', 'scale': '500-1000人', 'company': '科技B'},
+            {'name': '前端开发工程师', 'salary': '12-20K', 'place': '广州-天河区', 'education': '本科', 'experience': '1-3年', 'key_word': '前端', 'label': 'JavaScript,Vue,React', 'scale': '100-500人', 'company': '科技C'},
+            {'name': '数据分析师', 'salary': '10-18K', 'place': '深圳-南山区', 'education': '硕士', 'experience': '1-3年', 'key_word': '数据分析', 'label': 'Python,SQL,数据分析', 'scale': '1000人以上', 'company': '大厂D'},
+            {'name': '机器学习工程师', 'salary': '25-40K', 'place': '北京-海淀区', 'education': '硕士', 'experience': '3-5年', 'key_word': '机器学习', 'label': 'Python,TensorFlow,深度学习', 'scale': '1000人以上', 'company': '大厂E'},
+            {'name': 'DevOps工程师', 'salary': '20-35K', 'place': '杭州', 'education': '本科', 'experience': '3-5年', 'key_word': '运维', 'label': 'Docker,Kubernetes,Linux', 'scale': '500-1000人', 'company': '科技F'},
+            {'name': '全栈工程师', 'salary': '20-35K', 'place': '成都', 'education': '本科', 'experience': '3-5年', 'key_word': '全栈', 'label': 'Node.js,Vue,MySQL', 'scale': '100-500人', 'company': '科技G'},
+            {'name': 'Android开发工程师', 'salary': '15-25K', 'place': '武汉', 'education': '本科', 'experience': '1-3年', 'key_word': 'Android', 'label': 'Java,Android,Git', 'scale': '100-500人', 'company': '科技H'},
+            {'name': '产品经理', 'salary': '15-28K', 'place': '北京', 'education': '本科', 'experience': '3-5年', 'key_word': '产品', 'label': '产品,互联网,项目管理', 'scale': '500-1000人', 'company': '科技I'},
+            {'name': '大数据工程师', 'salary': '22-38K', 'place': '上海', 'education': '硕士', 'experience': '3-5年', 'key_word': '大数据', 'label': 'Hadoop,Spark,大数据', 'scale': '1000人以上', 'company': '大厂J'},
+            {'name': 'Python爬虫工程师', 'salary': '12-20K', 'place': '深圳', 'education': '本科', 'experience': '1-3年', 'key_word': 'Python', 'label': 'Python,爬虫,Redis', 'scale': '50-100人', 'company': '创业K'},
+            {'name': '测试工程师', 'salary': '10-18K', 'place': '广州', 'education': '大专', 'experience': '1-3年', 'key_word': '测试', 'label': '测试,Python,Linux', 'scale': '100-500人', 'company': '科技L'},
+            {'name': '数据科学家', 'salary': '30-50K', 'place': '北京', 'education': '博士', 'experience': '5-10年', 'key_word': '机器学习', 'label': 'Python,机器学习,R语言', 'scale': '1000人以上', 'company': '大厂M'},
+            {'name': '前端工程师', 'salary': '15-25K', 'place': '南京', 'education': '本科', 'experience': '1-3年', 'key_word': '前端', 'label': 'TypeScript,React,前端', 'scale': '100-500人', 'company': '科技N'},
+            {'name': 'Node.js开发', 'salary': '18-30K', 'place': '杭州', 'education': '本科', 'experience': '3-5年', 'key_word': '全栈', 'label': 'Node.js,JavaScript,MongoDB', 'scale': '500-1000人', 'company': '科技O'},
+        ]
+        for j in sample_jobs:
+            j['avg_salary'] = _parse_salary_to_avg(j.get('salary', ''))
+
+        from collections import Counter, defaultdict
+
+        sal_vals = [j['avg_salary'] for j in sample_jobs if j['avg_salary']]
+
+        top_jobs = {
+            'names': [j['name'] for j in sample_jobs],
+            'values': [3, 5, 4, 2, 6, 3, 2, 2, 4, 5, 2, 3, 1, 3, 2],
+        }
+        city_counter_s = Counter(_clean_city(j['place']) for j in sample_jobs)
+        top_cities = {
+            'names': list(city_counter_s.keys()),
+            'values': list(city_counter_s.values()),
+        }
+        bins_labels = ['5K以下', '5-10K', '10-15K', '15-20K', '20-30K', '30-50K', '50K以上']
+        salary_dist = {'bins': bins_labels, 'values': [2, 5, 12, 18, 25, 15, 8]}
+        stats_s = _boxplot_stats(sal_vals)
+        salary_box = {**stats_s, 'outliers': []}
+        edu_counter_s = Counter(j['education'] for j in sample_jobs)
+        edu_dist = [{'name': k, 'value': v} for k, v in edu_counter_s.items()]
+        exp_counter_s = Counter(j['experience'] for j in sample_jobs)
+        exp_dist = {'names': list(exp_counter_s.keys()), 'values': list(exp_counter_s.values())}
+        scale_counter_s = Counter(j['scale'] for j in sample_jobs)
+        scale_dist = [{'name': k, 'value': v} for k, v in scale_counter_s.items()]
+        label_counter_s = Counter()
+        for j in sample_jobs:
+            for lbl in j['label'].split(','):
+                label_counter_s[lbl.strip()] += 1
+        label_dist = {
+            'names': [x[0] for x in label_counter_s.most_common(15)],
+            'values': [x[1] for x in label_counter_s.most_common(15)],
+        }
+        city_salary = {
+            'cities': ['北京', '上海', '杭州', '深圳', '广州', '成都', '南京', '武汉'],
+            'salaries': [28.5, 26.2, 24.0, 22.8, 20.5, 19.2, 18.5, 17.8],
+        }
+        EXP_ORDER = ['不限', '1年以内', '1-3年', '3-5年', '5-10年', '10年以上']
+        EDU_ORDER = ['不限', '大专', '本科', '硕士', '博士']
+        exp_salary = {
+            'exp_labels': ['1-3年', '3-5年', '5-10年'],
+            'boxes': [
+                {'min': 8, 'q1': 12, 'median': 16, 'q3': 22, 'max': 28},
+                {'min': 15, 'q1': 20, 'median': 25, 'q3': 32, 'max': 40},
+                {'min': 22, 'q1': 30, 'median': 38, 'q3': 45, 'max': 55},
+            ],
+        }
+        edu_salary = {
+            'edu_labels': ['大专', '本科', '硕士', '博士'],
+            'boxes': [
+                {'min': 6, 'q1': 8, 'median': 10, 'q3': 14, 'max': 18},
+                {'min': 10, 'q1': 15, 'median': 20, 'q3': 28, 'max': 35},
+                {'min': 18, 'q1': 25, 'median': 30, 'q3': 40, 'max': 50},
+                {'min': 25, 'q1': 35, 'median': 42, 'q3': 52, 'max': 65},
+            ],
+        }
+        keyword_salary = {
+            'keywords': ['Python', 'Java', '大数据', '机器学习', '前端', '运维', '数据分析', '产品', '测试'],
+            'salaries': [22.5, 24.0, 30.0, 35.0, 18.0, 27.5, 16.0, 21.5, 14.0],
+        }
+        scale_salary = {
+            'scales': ['50人以下', '50-100人', '100-500人', '500-1000人', '1000人以上'],
+            'salaries': [15.0, 17.5, 20.0, 24.0, 28.0],
+        }
+        keyword_exp = {
+            'keywords': ['Python', 'Java', '前端', '数据分析', '机器学习'],
+            'exp_labels': ['1-3年', '3-5年', '5-10年'],
+            'series': {
+                '1-3年': [35, 28, 45, 50, 20],
+                '3-5年': [45, 50, 40, 38, 55],
+                '5-10年': [20, 22, 15, 12, 25],
+            },
+        }
+        keyword_edu = {
+            'keywords': ['Python', 'Java', '前端', '数据分析', '机器学习'],
+            'edu_labels': ['大专', '本科', '硕士'],
+            'series': {
+                '大专': [10, 15, 20, 5, 3],
+                '本科': [60, 65, 70, 55, 45],
+                '硕士': [30, 20, 10, 40, 52],
+            },
+        }
+        edu_exp_salary = {
+            'edu_labels': ['本科', '硕士', '博士'],
+            'exp_labels': ['1-3年', '3-5年', '5-10年'],
+            'matrix': [
+                [18.0, 25.0, 32.0],
+                [22.0, 30.0, 40.0],
+                [28.0, 38.0, 50.0],
+            ],
+        }
+        skill_counter_s = Counter()
+        for j in sample_jobs:
+            for sk in _extract_skills((j['name'] or '') + ' ' + (j['label'] or ''), [
+                'Python', 'Java', 'JavaScript', 'Vue', 'React', 'Node.js', 'MySQL', 'Docker',
+                'Kubernetes', 'Linux', 'Spring', 'Django', 'Flask', '机器学习', '深度学习',
+                '大数据', 'Hadoop', 'Spark', 'Git', 'MongoDB', 'Redis', 'SQL', '爬虫',
+                'TensorFlow', 'TypeScript', '前端', '后端', '全栈', '数据分析', '产品',
+            ]):
+                skill_counter_s[sk] += 1
+        skills = {
+            'names': [x[0] for x in skill_counter_s.most_common(20)],
+            'values': [x[1] for x in skill_counter_s.most_common(20)],
+        }
+        skill_cooccur = {
+            'nodes': [{'name': s, 'value': c} for s, c in skill_counter_s.most_common(12)],
+            'links': [
+                {'source': 'Python', 'target': 'Django', 'value': 5},
+                {'source': 'Python', 'target': 'MySQL', 'value': 4},
+                {'source': 'Java', 'target': 'Spring', 'value': 6},
+                {'source': 'Java', 'target': 'MySQL', 'value': 5},
+                {'source': 'JavaScript', 'target': 'Vue', 'value': 4},
+                {'source': 'JavaScript', 'target': 'React', 'value': 3},
+                {'source': 'Docker', 'target': 'Kubernetes', 'value': 4},
+                {'source': 'Python', 'target': '机器学习', 'value': 3},
+            ],
+        }
+        sankey = {
+            'nodes': [
+                {'name': 'Python'}, {'name': 'Java'}, {'name': '前端'}, {'name': '大数据'},
+                {'name': 'Django'}, {'name': 'Spring'}, {'name': 'Vue'}, {'name': 'Spark'},
+                {'name': 'MySQL'}, {'name': 'Docker'}, {'name': '机器学习'}, {'name': 'React'},
+            ],
+            'links': [
+                {'source': 'Python', 'target': 'Django', 'value': 5},
+                {'source': 'Python', 'target': 'MySQL', 'value': 4},
+                {'source': 'Python', 'target': '机器学习', 'value': 3},
+                {'source': 'Java', 'target': 'Spring', 'value': 6},
+                {'source': 'Java', 'target': 'MySQL', 'value': 5},
+                {'source': '前端', 'target': 'Vue', 'value': 4},
+                {'source': '前端', 'target': 'React', 'value': 3},
+                {'source': '大数据', 'target': 'Spark', 'value': 5},
+                {'source': '大数据', 'target': 'Docker', 'value': 3},
+            ],
+        }
+        map_data = [
+            {'name': '北京', 'value': 1500}, {'name': '上海', 'value': 1200},
+            {'name': '广东', 'value': 1100}, {'name': '杭州', 'value': 800},
+            {'name': '成都', 'value': 600}, {'name': '武汉', 'value': 500},
+            {'name': '南京', 'value': 450}, {'name': '西安', 'value': 380},
+            {'name': '深圳', 'value': 900}, {'name': '苏州', 'value': 350},
+        ]
+        kpi = {
+            'total': len(sample_jobs),
+            'avg_salary': 22.5,
+            'median_salary': 20.0,
+            'top_skill': 'Python',
+            'unique_cities': 8,
+            'unique_jobs': len(sample_jobs),
+        }
+        return JsonResponse({
+            'status': 'ok',
+            'source': 'sample',
+            'top_jobs': top_jobs,
+            'top_cities': top_cities,
+            'salary_dist': salary_dist,
+            'salary_box': salary_box,
+            'edu_dist': edu_dist,
+            'exp_dist': exp_dist,
+            'scale_dist': scale_dist,
+            'label_dist': label_dist,
+            'city_salary': city_salary,
+            'exp_salary': exp_salary,
+            'edu_salary': edu_salary,
+            'keyword_salary': keyword_salary,
+            'scale_salary': scale_salary,
+            'keyword_exp': keyword_exp,
+            'keyword_edu': keyword_edu,
+            'edu_exp_salary': edu_exp_salary,
+            'skills': skills,
+            'skill_cooccur': skill_cooccur,
+            'sankey': sankey,
+            'map_data': map_data,
+            'kpi': kpi,
+        })
