@@ -2264,7 +2264,8 @@ def get_eda_data(request):
         iqr = stats['q3'] - stats['q1']
         lo_f = stats['q1'] - 1.5 * iqr
         hi_f = stats['q3'] + 1.5 * iqr
-        outliers = [round(s, 1) for s in all_salaries if s < lo_f or s > hi_f][:50]
+        MAX_OUTLIERS = 50  # cap outlier list to avoid oversized JSON
+        outliers = [round(s, 1) for s in all_salaries if s < lo_f or s > hi_f][:MAX_OUTLIERS]
         salary_box = {**stats, 'outliers': outliers}
 
         # ---------- 5. edu_dist ----------

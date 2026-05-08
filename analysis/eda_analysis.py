@@ -14,6 +14,9 @@ import argparse
 import sqlite3
 from collections import Counter, defaultdict
 
+import sys as _sys
+import os as _os
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from preprocess import (
     parse_salary, clean_city, normalize_experience, extract_skills,
     preprocess_record, load_sqlite, EXP_ORDER, EDU_ORDER, SKILL_LIST,
